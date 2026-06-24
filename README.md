@@ -61,3 +61,9 @@ Epoch 3 | Loss: 0.0765 | 배치 평균 유사도 (Avg CosSim): 0.7345 | L2 Norm 
 ```
 
 ---
+
+## ⚖️ License
+
+This project is licensed under the **GNU General Public License v3 (GPLv3)**. Any derivatives, extensions, or integrations into larger models must also be open-sourced under the same copyleft terms, protecting this cognitive architecture from proprietary exploitation.
+
+본 아키텍처의 독창적인 수리 기믹과 기하학적 제어 구조를 사유화로부터 영구히 보호하기 위해 강력한 카피레프트 성격의 **GPLv3 라이센스**를 채택하고 있습니다.
