@@ -1,3 +1,8 @@
+# =========================================================================================
+# ⚠️ Deprecated: 구버전 코드입니다. 최신 멀티 배치 및 적응형 아키텍처는 아래 소스를 참조하세요.
+# ⚠️ Deprecated: Old code. Please refer to commercial_alignment_system_test_2.py for the latest architecture.
+# =========================================================================================
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
