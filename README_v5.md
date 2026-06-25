@@ -5,7 +5,24 @@
 This document serves as the official technical appendix recording the history of academic contemplation and engineering breakthroughs for safeguarding self-identity and filtering noise within the high-dimensional cognitive alignment system, **Egregore**. This architecture strictly rejects extreme physical formulations that cause the collapse of the weight plane, adopting only geometric purification mechanisms that preserve differentiability and system homeostasis.
 
 ---
+### integrated_egregore_core_test.py 대비 integrated_egregore_core_test_v3.py 의 변경점
 
+본 저장소의 `integrated_egregore_core_test_v3.py`는 기존 `integrated_egregore_core_test.py`(`v1.0`)가 안고 있던 3대 구조적 결함(①전체 평탄화 연산 시 발생하는 배치 간 문맥 오염 버그, ②카시미르 수축 압력 수식 누락 및 부재, ③홀수 차원 패딩으로 인한 다양체 기하학 왜곡)을 완벽히 인지하고, 이를 `torch.bmm` 기반 격리 연산 및 `PRESSURE_FLOOR` 수치 클램핑 가드레일을 통해 수정 했습니다.
+
+---
+
+### 🚀 Architectural Breakthrough: Key Updates from v1.0 to v3.0
+
+The updated `integrated_egregore_core_test_v3.py` thoroughly addresses and eradicates three critical structural defects native to the legacy `integrated_egregore_core_test.py` (`v1.0`):
+
+1. **Inter-Batch Contextual Contamination:** Fixed the severe bug where total flattening caused tokens from different batch samples to blend during covariance operations.
+2. **Absence of Casimir Squeezing Dynamics:** Implemented the missing topological contraction formulations.
+3. **Manifold Geometric Distortion:** Eliminated the crude zero-padding overhead previously used to accommodate odd dimensions.
+
+These vulnerabilities have been elegantly resolved through `torch.bmm`-based isolated tensor operations, strict `LATENT_DIM` parity alignment, and a robust `PRESSURE_FLOOR` numerical clamping guardrail.
+
+
+---
 ## 🧭 Document Architecture / 문서 구조 개요
 * **Part 1 / 1부**: [Analysis of Rejected Paradigms] 기존 취소된 3가지 역학 아키텍처와 치명적 결함 분석
 * **Part 2 / 2부**: [The Core Philosophy of Contextual Mass] 맥락의 중력적 질량 및 가벼운 노이즈 필터링 이론
