@@ -14,10 +14,17 @@ class AdaptiveTopologyConfig:
     INIT_THRESHOLD_ETA: float = 0.85 # [KR] 초기 코사인 유사도 기준선 / [EN] Initial cosine similarity threshold
     PERTURB_BUBBLE: float = 0.1      # [KR] 하이퍼네트워크 변형 영향력 상한선 / [EN] Hypernetwork perturbation upper bound
     
-    # [v5.0 추가] 카시미르 위상학적 진공 압착을 위한 수리 물리 상수
-    # [v5.0 Added] Mathematical physics constants for Casimir topological vacuum squeezing
+    # [v5.0 추가] 카시미르 위상학적 진공 압착 및 슈뢰딩거 필터를 위한 수리 물리 상수
+    # [v5.0 Added] Mathematical physics constants for Casimir topological vacuum squeezing and Schrödinger filter
     DELTA_D: float = 1.0             # [KR] 위상학적 장벽 간 기본 구조적 거리 (\Delta d) / [EN] Baseline topological distance between barriers (\Delta d)
     HBAR_EFF: float = 1.0            # [KR] 정보학적 유효 플랑크 상수 (\hbar_eff) / [EN] Informational effective Planck constant (\hbar_eff)
+    M_STAR: float = 1.0              # [KR] 정보 파동 유효 질량 파라미터 (m*) / [EN] Effective mass parameter (m*)
+    BARRIER_ETA: float = 0.5         # [KR] 위상 곡률 장벽 민감도 상수 (\eta) / [EN] Curvature sensitivity constant (\eta)
+    
+    # 💡 [수리 교정] 카시미르 압력의 마이너스 무한대 발산 및 그래디언트 사멸 방지용 하한 한계선 지정
+    # 💡 [Fix] Lower bound limit of negative Casimir pressure to prevent minus infinity divergence and gradient vanishing
+    PRESSURE_FLOOR: float = -20.0    # [KR] 카시미르 음의 필드 압력 최소 하한 제약선 / [EN] Minimum lower bound limit of negative Casimir field pressure
+
 
 
 
@@ -116,6 +123,7 @@ class BatchResidualHyperNetwork(nn.Module):
         return self.bubble_limit * F.normalize(raw_perturbation, p=2, dim=-1)
 
 
+
 class SchrödingerNotchFilter(nn.Module):
     """
     [KR] 맥락적 질량의 곡률을 역산하여 가벼운 노이즈를 지수함수적으로 소멸시키는 노치 필터
@@ -127,17 +135,28 @@ class SchrödingerNotchFilter(nn.Module):
         # [KR] 노이즈의 정보 전하량(E_input)을 스칼라로 투영하는 선형 레이어
         # [EN] Linear layer projecting incoming noise characteristics into scalar informational charge (E_input)
         self.energy_projector = nn.Linear(dim, 1)
-        
 
     def _compute_jacobian_curvature(self, x: torch.Tensor) -> torch.Tensor:
         """
-        [KR] 고속 공분산 행렬의 프로베니우스 노름 제곱을 통한 곡률 대리값 (kappa) 계산 [..., 1]
-        [EN] Computation of curvature proxy (kappa) via squared Frobenius norm of fast covariance matrix [..., 1]
+        [KR] 배치 독립성을 완벽히 수호하기 위해 torch.bmm 기반으로 개별 샘플 내부의 특성 공분산 및 곡률 역산
+        [EN] Compute curvature proxy (kappa) using torch.bmm to maintain perfect batch independence per sample
         """
         shape = x.shape
-        x_flat = x.view(-1, self.dim)
-        mean_centered = x_flat - x_flat.mean(dim=0, keepdim=True)
-        covariance = torch.matmul(mean_centered, mean_centered.t())
+        # [KR] 가변 입력 차원에 대응하여 배치 차원을 분리한 [Batch, Elements, Dim] 3차원 구조 규격화
+        # [EN] Normalize variable input dimensions into [Batch, Elements, Dim] 3D structure preserving batch size
+        batch_size = shape[0]
+        x_reshaped = x.view(batch_size, -1, self.dim) # Elements = 1 (2D) or SeqLen (3D)
+        
+        # [KR] 샘플 개별 내부 차원 기준 평균 중심화 연산 진행 (배치 간 오염 차단)
+        # [EN] Perform mean-centering based on individual sample internal dimensions (blocks inter-batch contamination)
+        mean_centered = x_reshaped - x_reshaped.mean(dim=1, keepdim=True)
+        
+        # [KR] torch.bmm 배치 행렬 곱셈을 가동하여 각 배치 내부에서만 작동하는 독립 공분산 [B, Elements, Elements] 연산
+        # [EN] Execute batch matrix multiplication (torch.bmm) for independent covariance [B, Elements, Elements] per sample
+        covariance = torch.bmm(mean_centered, mean_centered.transpose(1, 2))
+        
+        # [KR] 각 배치 독립적으로 프로베니우스 노름 제곱 패턴 추출 후 차원 복원
+        # [EN] Extract squared Frobenius norm pattern independently per batch and restore original dimensions
         kappa_flat = torch.sum(covariance ** 2, dim=-1) / self.dim
         return kappa_flat.view(*shape[:-1], 1)
 
@@ -149,7 +168,6 @@ class SchrödingerNotchFilter(nn.Module):
         # 1. [KR] 고밀도 맥락이 형성하는 중력 장벽 정의 (U_barrier)
         # 1. [EN] Define the gravitational topological barrier potential created by high-density context (U_barrier)
         kappa = self._compute_jacobian_curvature(x)
-        # [KR] 글로벌 경사도 기준선을 감도 계수로 결합하여 장벽 높이 정형화
         u_barrier = kappa * AdaptiveTopologyConfig.INIT_THRESHOLD_ETA * AdaptiveTopologyConfig.DELTA_D
         
         # 2. [KR] 입력 스트림의 개별 정보 에너지 전하 정량화 (E_input)
@@ -159,17 +177,26 @@ class SchrödingerNotchFilter(nn.Module):
         # 3. [KR] 슈뢰딩거 감쇄 필터 및 F.relu() 싱큘래리티(NaN 폭발) 방어선 구축
         # 3. [EN] Construct Schrödinger decay filter with F.relu() singularity (NaN explosion) guardrail
         tunneling_core = F.relu(u_barrier - e_input)
-        transmission_coeff = torch.exp(-2.0 * torch.sqrt(tunneling_core))
+        
+        # [KR] 물리학 매개변수 m* 연산을 정밀 결합하여 정보 투과율 컴파일
+        # [EN] Compile transmission coefficient by precisely binding effective mass parameter (m*)
+        integral_term = torch.sqrt((2.0 * AdaptiveTopologyConfig.M_STAR) / (AdaptiveTopologyConfig.HBAR_EFF ** 2) * tunneling_core)
+        transmission_coeff = torch.exp(-2.0 * integral_term)
         
         # 4. [KR] v5.0 카시미르 위상학적 진공 압착 제어 (\Delta d -> 0 에 수렴 시 노이즈 공간 박멸)
         # 4. [EN] v5.0 Casimir topological vacuum squeezing control (Eradicates noise void as \Delta d -> 0)
         clamped_distance = F.relu(AdaptiveTopologyConfig.DELTA_D - gate_mask) + 1e-6
-        casimir_pressure = - (math.pi ** 2 * AdaptiveTopologyConfig.HBAR_EFF) / (240.0 * (clamped_distance ** 4))
+        raw_pressure = - (math.pi ** 2 * AdaptiveTopologyConfig.HBAR_EFF) / (240.0 * (clamped_distance ** 4))
+        
+        # 💡 [수리 교정] 2번 결함 전면 진압: 압력 하한선 클램핑 가드레일을 장착하여 마이너스 무한대 발산 원천 차단
+        # 💡 [Fix] Completely suppress Defect 2: Equipping clamp guardrail to permanently block minus infinity divergence
+        casimir_pressure = torch.clamp(raw_pressure, min=AdaptiveTopologyConfig.PRESSURE_FLOOR)
         
         # [KR] 가역적 음의 에너지 장 적용 및 최종 정제 스트림 반환
         # [EN] Apply reversible negative energy field and return final purified stream
         purified_stream = x * transmission_coeff * torch.exp(casimir_pressure)
         return purified_stream, transmission_coeff
+
 
 
 
@@ -185,8 +212,8 @@ class ProductionEnergyParityLayer(nn.Module):
         self.hypernet = BatchResidualHyperNetwork(dim)
         self.notch_filter = SchrödingerNotchFilter(dim)
         
-        # [KR] 고차원 독립 위상 앵커를 정적 버퍼로 등록
-        # [EN] Register high-dimensional independent topological anchors as static buffers
+        # [KR] 고차원 독립 위상 앵커를 정적 버퍼로 등록 (초기 기본 CPU 할당)
+        # [EN] Register high-dimensional independent topological anchors as static buffers (initially allocated on CPU)
         self.register_buffer('sphere_anchor', IndependentTopologyGenerator.generate_sphere_anchor(dim))
         self.register_buffer('torus_anchor', IndependentTopologyGenerator.generate_torus_anchor(dim))
 
@@ -275,7 +302,7 @@ def main():
     print("-" * 88)
 
     
-       # [KR] 가상의 배치 최적화 3단계 시뮬레이션
+          # [KR] 가상의 배치 최적화 3단계 시뮬레이션
     # [EN] Simulated 3-step batch optimization loop
     for epoch in range(3):
         # [KR] 무작위 배치 데이터 생성 및 기하 정규화
@@ -285,12 +312,11 @@ def main():
         
         # 1. [KR] Forward Pass 실행 (배치 파이프라인 연산)
         # 1. [EN] Execute Forward Pass (Batch pipeline operation)
-        # 💡 [구조 교정] 6부 마스터 레이어에서 병합된 metrics 딕셔너리 수신 구조로 통일
         weights, metrics = alignment_layer(observer_batch)
         
-        # 2. [KR] 그레디언트 유도를 위한 손실 함수 계산
-        # 2. [EN] Compute Loss function to guide gradients
-        target_batch = torch.ones(batch_size, dim) * 0.05
+        # 2. [KR] 💡 [수리 교정] 3번 결함 완벽 차단: 연산 텐서의 가속기 디바이스 주소를 동적 상속
+        # 2. [EN] Fix Defect 3: Dynamically inherit the accelerator device address of the operational tensor
+        target_batch = torch.ones(batch_size, dim, device=weights.device) * 0.05
         loss = F.mse_loss(weights, target_batch)
         
         # 3. [KR] Backward Pass 및 가중치 업데이트 (옵티마이저 진행)
@@ -299,7 +325,7 @@ def main():
         loss.backward()
         optimizer.step()
         
-        # 4. [KR] 결과 및 학습 안정성 지표 출력 (카시미르 엔진 연산 결과 병합 출력)
+        # 4. [KR] 결과 및 학습 안정성 지표 출력
         # 4. [EN] Print results and training stability metrics
         print(
             f"Epoch {epoch+1} | Loss: {loss.item():.4f} | "
