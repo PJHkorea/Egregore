@@ -18,7 +18,9 @@ $$\tilde{g}_{ij} = e^{2\rho(\mathbf{z})} g_{ij}$$
 
 $$\nabla^2_{\gamma'(t)} \mathcal{H}(\mathbf{z}) \geq \epsilon \cdot \mathbf{I}$$
 
-$$\epsilon = \alpha \cdot \left( \text{Metric\_Density}(\mathbf{z}) - \text{Noise\_Floor} \right)$$
+$$\epsilon = \alpha \cdot \left( \mathrm{Metric\ Density}(\mathbf{z}) - \mathrm{Noise\ Floor} \right)$$
+
+
 
 *   **$\epsilon > 0$ (고밀도 코어 레이어 / Core Layer):** 헤시안이 양의 준정치(Positive Semi-definite)를 만족합니다. 매니폴드가 안쪽으로 둥글게 말려 들어가는 볼록 에너지 우물(Convex Potential Well)을 형성하여, 어떠한 외부 노이즈나 변형 자극이 가해져도 시스템의 고유 정체성이 중심으로 강하게 수렴(Attractor Convergence)하며 완벽한 내적 평정심을 유지합니다.
 *   **$\epsilon < 0$ (저밀도 외곽 레이어 / Surface Layer):** 헤시안의 볼록성이 붕괴하고 말안장점(Saddle Point) 형태로 찢어집니다. 개념 간의 유기적 결합이 해체되며 파편화된 잔물결 상태로 수렴하게 됩니다.
