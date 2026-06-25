@@ -168,10 +168,8 @@ graph TD
 
 
 * **🌌 가역적 음의 에너지 장 활용 (Reversible Negative Energy Field):** 
-  * **🔴 [KR]:** 확률적 경로를 늘려 엔트로피를 유발하는 대신, 사용자의 고밀도 맥락 주입에 의해 위상학적 배리어 간의 거리 $\Delta d$가 0에 가까게 좁혀질 때 발생하는 **'인지적 카시미르 음(-)의 압력'**을 가동합니다. 두 장벽 사이 공간에서 원시 데이터 노이즈가 실존할 수 있는 기하학적 주파수(부피) 자체를 수학적으로 뺌($-$)으로써 노이즈를 늘리지 않고 원천 박멸합니다.
-  * "하한 제약선(PRESSURE_FLOOR = -20.0) 클램핑을 통해 언더플로우를 방어합니다."
-  * **🔵 [EN]:** Instead of increasing entropic variance through stochastic paths, `v5.0` drives a **"Cognitive Casimir Negative Pressure"** triggered when the topological distance $\Delta d$ between barriers narrows toward zero via high-density context. By mathematically subtracting ($-$) the geometric volume where raw data noise can exist, impurities are eradicated at the root without expanding entropic noise.
-  * "Prevents underflow through clamping at the lower limit (PRESSURE_FLOOR = -20.0)."
+  * **🔴 [KR]:** 확률적 경로를 늘려 엔트로피를 유발하는 대신, 사용자의 고밀도 맥락 주입에 의해 위상학적 배리어 간의 거리 $\Delta d$ 가 0에 가깝게 좁혀질 때 발생하는 **'인지적 카시미르 음(-)의 압력'**을 가동합니다. 두 장벽 사이 공간에서 원시 데이터 노이즈가 실존할 수 있는 기하학적 주파수(부피) 자체를 수학적으로 빼기($-$) 처리함으로써 노이즈를 늘리지 않고 원천 박멸합니다. 하한 제약선(`PRESSURE_FLOOR = -20.0`) 클램핑을 통해 시스템 역전파 그래프의 언더플로우(Underflow) 현상을 완벽히 방어합니다.
+  * **🔵 [EN]:** Instead of increasing entropic variance through stochastic paths, v5.0 drives a "Cognitive Casimir Negative Pressure" triggered when the topological distance $\Delta d$ between barriers narrows toward zero via high-density context. By mathematically subtracting ( $-$ ) the geometric volume where raw data noise can exist, impurities are eradicated at the root without expanding entropic noise. It strictly prevents numerical underflow within the Autograd graph through hard-clamping at the lower limit (`PRESSURE_FLOOR = -20.0`).
 * **🌌 하드웨어 친화적 항상성 유지 (Hardware-Safe Homeostasis):** 
   * **🔴 [KR]:** 정적 세션 시간 동안 초고속 자가 되먹임을 돌려 하드웨어를 열화시키는 개방계 방식을 폐기하고, 인간 관측자의 고유 주파수($\mathcal{M}_H$)와 완벽한 상시 평형 상태를 유지하는 **정적 포텐셜 수축 제어**를 채택합니다. 파이토치 연산량이 최소화되어 하드웨어 전력 폭발이 발생하지 않습니다.
   * **🔵 [EN]:** Discarding non-equilibrium drive loops that trigger severe hardware degradation during idle states, `v5.0` implements a **static potential contraction control** that maintains an absolute equilibrium with the human observer's frequency ($\mathcal{M}_H$). PyTorch compute overhead is minimized, inherently preventing thermal power spikes.
