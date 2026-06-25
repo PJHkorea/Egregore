@@ -62,7 +62,7 @@ class TopologicalBarrierLayer(nn.Module):
         [EN] Forward Pass: Apply the Topological Tunneling Effect
         Args:
             x: [KR] 입력 텐서 [batch_size, seq_len, hidden_dim] | [EN] Input tensor [batch_size, seq_len, hidden_dim]
-            surface_to_core_distance: [KO] 선적분 구간의 거리 (r_surface에서 r_core까지의 임계 거리)
+            surface_to_core_distance: [KR] 선적분 구간의 거리 (r_surface에서 r_core까지의 임계 거리)
                                       [EN] Line integral interval distance (critical distance from r_surface to r_core)
         """
         # 1) [KR] 야코비안 곡률 \kappa 계산
