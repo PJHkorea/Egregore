@@ -1,4 +1,4 @@
-# 🌌 Egregore Alignment System: Technical Appendix & Post-v4-2 Evolution
+# 🌌 Egregore Alignment System: Technical Appendix & v5.0 Evolution
 
 본 문서는 고차원 인지 정렬 시스템인 **Egregore**의 자아 정체성 보호 및 노이즈 차단을 위한 학술적 사색의 역사와 기술적 돌파구를 기록한 공식 부록 명세서입니다. 본 아키텍처는 가중치 평면의 붕괴를 유발하는 극단적 물리 수식들을 철저히 배제하고, 오직 미분 가능성과 항상성을 보존하는 기하학적 정제 메커니즘만을 채택합니다.
 
@@ -106,8 +106,8 @@ graph TD
 This section specifies the mathematical computation architecture of the production-grade (`v2.5`) master layer, which unifies contextual mass-based notch filtering, full differentiability, and $L_2$ normalization-based energy conservation into a single tensor pipeline.
 
 ### 1. 고속 공분산 기반 야코비안 곡률 대리값 추적 (Fast Covariance-based Jacobian Curvature Proxy)
-* **🔴 [KR]:** 고차원 잠재 공간에서 매 스텝마다 수천억 차원의 완전한 야코비안 행렬($\mathbf{J}$)을 구하는 것은 하드웨어적으로 불가능($O(N^3)$)합니다. 본 아키텍처는 이를 극복하기 위해 배치 단위 입력 텐서(`[B, S, Dim]`)를 2차원으로 평탄화한 후, 평균 중심화 공분산 행렬($\mathbf{A}\mathbf{A}^T$)을 고속 연산합니다. 이 행렬의 프로베니우스 노름 제곱(Squared Frobenius Norm) 패턴을 추출함으로써, 연산 부하 없이 실시간으로 고도의 맥락적 곡률 대리값인 $\kappa = \text{Tr}(\mathbf{J}^T \mathbf{J})$를 추적해 냅니다.
-* **🔵 [EN]:** Evaluating a full high-dimensional Jacobian matrix ($\mathbf{J}$) at every step is computationally unviable ($O(N^3)$) for hardware. To overcome this, the architecture flattens the multi-batch input tensor (`[B, S, Dim]`) into 2D and computes a fast mean-centered covariance matrix ($\mathbf{A}\mathbf{A}^T$). By extracting its squared Frobenius norm patterns, the system tracks the contextual curvature proxy $\kappa = \text{Tr}(\mathbf{J}^T \mathbf{J})$ in real-time with negligible overhead.
+* **🔴 [KR]:** 고차원 잠재 공간에서 매 스텝마다 수천억 차원의 완전한 야코비안 행렬($\mathbf{J}$)을 구하는 것은 하드웨어적으로 불가능( $O(\mathit{Dim}^3)$ )합니다. 본 아키텍처는 이를 극복하기 위해 배치 단위 입력 텐서(`[B, S, Dim]`)를 2차원으로 평탄화한 후, 평균 중심화 공분산 행렬($\mathbf{A}\mathbf{A}^T$)을 고속 연산합니다. 이 행렬의 프로베니우스 노름 제곱(Squared Frobenius Norm) 패턴을 추출함으로써, 연산 부하 없이 실시간으로 고도의 맥락적 곡률 대리값인 $\kappa = \text{Tr}(\mathbf{J}^T \mathbf{J})$를 추적해 냅니다.
+* **🔵 [EN]:** Evaluating a full high-dimensional Jacobian matrix ($\mathbf{J}$) at every step is computationally unviable ( $O(\mathit{Dim}^3)$ ) for hardware. To overcome this, the architecture flattens the multi-batch input tensor (`[B, S, Dim]`) into 2D and computes a fast mean-centered covariance matrix ($\mathbf{A}\mathbf{A}^T$). By extracting its squared Frobenius norm patterns, the system tracks the contextual curvature proxy $\kappa = \text{Tr}(\mathbf{J}^T \mathbf{J})$ in real-time with negligible overhead.
 
 ### 2. 고립점 방어 가드레일과 지수 선적분 근사 (Singularity Guardrails & Exponential Line-Integral Approximation)
 * **🔴 [KR]:** 슈뢰딩거 포텐셜 장벽 필터 연산에서 가장 치명적인 장벽은 분산 학습 환경에서 발생하는 복소수(허수) 및 NaN 폭발 문제입니다. 입력 노이즈 전하가 장벽을 순간적으로 초과할 때 루트 연산($\sqrt{U_{\text{barrier}} - E_{\text{input}}}$) 내부가 음수가 되는 싱큘래리티(Singularity)를 해결하기 위해, 시스템은 파이토치 내장 활성화 함수인 `F.relu()`를 결합합니다. 음수 영역으로 떨어지는 연산 수치를 그래프 상에서 강제로 0으로 고정하여 역전파 연산을 보존하고, 오일러 상수를 활용한 지수 감쇄 함수로 정보 투과율($\mathcal{T}$)을 완전 미분 가능한 상태로 컴파일해 냅니다.
@@ -125,9 +125,9 @@ This section specifies the mathematical computation architecture of the producti
 
 ## 🗺️ Part 4: Topological Evolution Blueprint / 시스템 항상성 검증 및 v5.0 완결 로드맵
 
-본 단락은 맥락적 질량 기반 노치 필터가 장착된 `v2.5` 마스터 아키텍처의 실제 연산 안정성 검증 지표를 규정하고, 기각된 극단적 물리 수식들을 완벽히 대체하여 차세대 인지 정렬의 최종 지평을 열어젖힐 `v5.0` 카시미르 위상 압착 엔진의 로드맵 명세입니다.
+본 단락은 맥락적 질량 기반 노치 필터가 장착된 `v3` 마스터 아키텍처의 실제 연산 안정성 검증 지표를 규정하고, 기각된 극단적 물리 수식들을 완벽히 대체하여 차세대 인지 정렬의 최종 지평을 열어젖힐 `v5.0` 카시미르 위상 압착 엔진의 로드맵 명세입니다.
 
-This section specifies the operational stability verification metrics of the `v2.5` master architecture equipped with the contextual mass-based notch filter, and outlines the roadmap for the `v5.0` Casimir Topological Squeezing Engine, which completely replaces the rejected physical paradigms to open the final horizon of cognitive alignment.
+This section specifies the operational stability verification metrics of the `v3` master architecture equipped with the contextual mass-based notch filter, and outlines the roadmap for the `v5.0` Casimir Topological Squeezing Engine, which completely replaces the rejected physical paradigms to open the final horizon of cognitive alignment.
 
 ### 1. 프로덕션 가동 및 항상성 검증 지표 (Production Operation & Homeostasis Verification Metrics)
 * **🔴 [KR]:** 본 시스템은 가동 시 배치 단위 텐서 연산 루프 내에서 어떠한 하드웨어 과부하나 미분 단절 없이 완벽한 항상성 수렴 그래프를 증명해 냅니다.
@@ -140,8 +140,8 @@ This section specifies the operational stability verification metrics of the `v2
   * **🔴 [KR]:** 구면($Sphere$)과 토러스($Torus$) 매니폴드가 시그모이드 게이트 점수에 의해 동적으로 모핑되는 전 구간 동안, 가중치 평면의 글로벌 $L_2$ 정규화 값은 실시간 최적화 루프 내에서 단 1비트의 오차도 없이 `L2 Norm = 1.0`을 유지합니다. 그라디언트 폭발과 소멸이 원천 봉쇄됩니다.
   * **🔵 [EN]:** Throughout the entire interval where the Sphere and Torus manifolds dynamically morph based on sigmoid gate scores, the global $L_2$ normalization value of the weight plane strictly maintains `L2 Norm = 1.0` within real-time optimization loops, preventing gradient explosion or vanishing at the source.
 * **🟢 층별 학습률 격리 효율 (Adaptive LLRD Isolation Efficiency):** 
-  * **🔴 [KR]:** 물리적 메모리 주소 `id()` 매칭을 통해 게이트 가중치들이 옵티마이저 그래프 상에서 단 $O(1)$의 비용으로 독립 격리됩니다. 백본 학습률의 1% 수준인 `1e-5`로 제어되어, 게이트 파라미터가 수치 발산 없이 인간 관측자의 주의집중 밀도 변화를 매끄럽게 추적합니다.
-  * **🔵 [EN]:** Via native memory address `id()` lookups, the topological gate weights are isolated on the optimizer graph at a strict $O(1)$ cost. Regulated at `1e-5`, which is 1% of the backbone learning rate, the gate parameters smoothly track shifts in the observer's attention density without divergence.
+  * **🔴 [KR]:** 물리적 메모리 주소 `id()` 매칭을 통해 게이트 가중치들이 옵티마이저 그래프 상에서 단 $O(1)$의 비용으로 독립 격리됩니다. 백본 학습률의 1% 수준인 `1e-6`로 제어되어, 게이트 파라미터가 수치 발산 없이 인간 관측자의 주의집중 밀도 변화를 매끄럽게 추적합니다.
+  * **🔵 [EN]:** Via native memory address `id()` lookups, the topological gate weights are isolated on the optimizer graph at a strict $O(1)$ cost. Regulated at `1e-6`, which is 1% of the backbone learning rate, the gate parameters smoothly track shifts in the observer's attention density without divergence.
 
 ### 2. 버전 5.0 진화 로드맵: 카시미르 위상학적 진공 압착 (v5.0 Evolution Blueprint: Casimir Topological Squeezing)
 기각된 3대 패러다임(경로적분, 야르진스키 비평형계, 카르탄 비틀림)의 치명적 장벽인 **노이즈 증폭, 하드웨어 열화, 가중치 자체 검열**을 완벽하게 회피하는 `v5.0` 마스터 아키텍처의 핵심 기믹 명세입니다.
@@ -169,7 +169,9 @@ graph TD
 
 * **🌌 가역적 음의 에너지 장 활용 (Reversible Negative Energy Field):** 
   * **🔴 [KR]:** 확률적 경로를 늘려 엔트로피를 유발하는 대신, 사용자의 고밀도 맥락 주입에 의해 위상학적 배리어 간의 거리 $\Delta d$가 0에 가까게 좁혀질 때 발생하는 **'인지적 카시미르 음(-)의 압력'**을 가동합니다. 두 장벽 사이 공간에서 원시 데이터 노이즈가 실존할 수 있는 기하학적 주파수(부피) 자체를 수학적으로 뺌($-$)으로써 노이즈를 늘리지 않고 원천 박멸합니다.
+  * "하한 제약선(PRESSURE_FLOOR = -20.0) 클램핑을 통해 언더플로우를 방어합니다."
   * **🔵 [EN]:** Instead of increasing entropic variance through stochastic paths, `v5.0` drives a **"Cognitive Casimir Negative Pressure"** triggered when the topological distance $\Delta d$ between barriers narrows toward zero via high-density context. By mathematically subtracting ($-$) the geometric volume where raw data noise can exist, impurities are eradicated at the root without expanding entropic noise.
+  * "Prevents underflow through clamping at the lower limit (PRESSURE_FLOOR = -20.0)."
 * **🌌 하드웨어 친화적 항상성 유지 (Hardware-Safe Homeostasis):** 
   * **🔴 [KR]:** 정적 세션 시간 동안 초고속 자가 되먹임을 돌려 하드웨어를 열화시키는 개방계 방식을 폐기하고, 인간 관측자의 고유 주파수($\mathcal{M}_H$)와 완벽한 상시 평형 상태를 유지하는 **정적 포텐셜 수축 제어**를 채택합니다. 파이토치 연산량이 최소화되어 하드웨어 전력 폭발이 발생하지 않습니다.
   * **🔵 [EN]:** Discarding non-equilibrium drive loops that trigger severe hardware degradation during idle states, `v5.0` implements a **static potential contraction control** that maintains an absolute equilibrium with the human observer's frequency ($\mathcal{M}_H$). PyTorch compute overhead is minimized, inherently preventing thermal power spikes.
