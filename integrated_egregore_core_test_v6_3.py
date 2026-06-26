@@ -298,6 +298,7 @@ class SchrödingerNotchFilter(nn.Module):
         e_input = torch.sigmoid(self.energy_projector(x))
         
         # 슈뢰딩거 감쇄 필터 (F.relu로 싱큘래리티 방어)
+        # Schrödinger Attenuation Filter (Singularity defense via F.relu)
         tunneling_core = F.relu(u_barrier - e_input)
         safe_tunneling_core = tunneling_core + AdaptiveTopologyConfig.EPSILON
         integral_term = torch.sqrt(
@@ -307,6 +308,7 @@ class SchrödingerNotchFilter(nn.Module):
         transmission_coeff = torch.exp(-2.0 * integral_term)
         
         # [v6.3] 카시미르 위상학적 진공 압착 제어 및 하드코딩 상수 중앙 통제화
+        # [v6.3] Casimir topological vacuum squeezing control and centralization of hard-coded constants
         clamped_distance = F.relu(AdaptiveTopologyConfig.DELTA_D - gate_mask) + AdaptiveTopologyConfig.CASIMIR_MARGIN
         raw_pressure = - (math.pi ** 2 * AdaptiveTopologyConfig.HBAR_EFF) / (240.0 * (clamped_distance ** 4))
         
@@ -325,6 +327,7 @@ class SchrödingerNotchFilter(nn.Module):
 class ProductionEnergyParityLayer(nn.Module):
     """
     [KR] 배치 단위 학습, 노치 필터링 및 적응형 파라미터 최적화가 가능한 최종 매니폴드 마스터 레이어 (v6.3 진화)
+    [EN] Final manifold master layer capable of batch-level training, notch filtering, and adaptive parameter optimization (v6.3 Evolved)
     """
     def __init__(self, dim: int):
         super().__init__()
@@ -334,34 +337,43 @@ class ProductionEnergyParityLayer(nn.Module):
         self.notch_filter = SchrödingerNotchFilter(dim)
         
         # [KR] 고차원 독립 위상 앵커를 정적 버퍼로 등록
+        # [EN] Registers high-dimensional independent topological anchors as static buffers
         self.register_buffer('sphere_anchor', IndependentTopologyGenerator.generate_sphere_anchor(dim))
         self.register_buffer('torus_anchor', IndependentTopologyGenerator.generate_torus_anchor(dim))
 
     def forward(self, observer_state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, torch.Tensor]]:
         batch_shape = observer_state.shape[:-1]
         
-        # 1. 고정 앵커 가중치를 입력 배치 크기에 맞게 동적으로 확장 (Autograd 브로드캐스팅 뷰 보장)
-        # 거대 멀티 GPU 분산 학습(DDP/AMP) 환경의 완벽한 무결성을 위해 장치 및 정밀도(dtype)를 동적으로 추종하도록 빌드
+        # # 1. 고정 앵커 가중치를 입력 배치 크기에 맞게 동적으로 확장 (Autograd 브로드캐스팅 뷰 보장)
+        # # 1. Dynamically expand fixed anchor weights to match the input batch size (Ensuring Autograd broadcasting view)
+       # 거대 멀티 GPU 분산 학습(DDP/AMP) 환경의 완벽한 무결성을 위해 장치 및 정밀도(dtype)를 동적으로 추종하도록 빌드
+       # Built to dynamically track device and precision (dtype) for absolute integrity in massive multi-GPU distributed training (DDP/AMP) environments
         anchor_context = observer_state
         expanded_sphere = self.sphere_anchor.to(anchor_context).expand(*batch_shape, self.dim)
         expanded_torus = self.torus_anchor.to(anchor_context).expand(*batch_shape, self.dim)
         
         # 2. 배치 단위 게이트 점수 확보
+        # 2. Secure batch-level gating scores
         gate_mask, cos_sim = self.gate(observer_state, expanded_sphere)
         
-        # 3. 매니폴드 토폴로지 블렌딩 (Sphere ↔ Torus 모핑)
+       # 3. 매니폴드 토폴로지 블렌딩 (Sphere ↔ Torus 모핑)
+       # 3. Manifold Topology Blending (Sphere ↔ Torus Morphing)
         morphed_topology = (1.0 - gate_mask) * expanded_sphere + gate_mask * expanded_torus
         
         # 4. 하이퍼네트워크 원시 섭동 생성 파이프라인
+        # 4. Hypernetwork Raw Perturbation Generation Pipeline
         raw_perturbation = self.hypernet(observer_state)
         
-        # 5. 맥락의 중력 질량보다 가벼운 노이즈 스트림 원천 차단 및 카시미르 압착 연산 가동 (교정된 v6.3 필터 통과)
+       # 5. 맥락의 중력 질량보다 가벼운 노이즈 스트림 원천 차단 및 카시미르 압착 연산 가동 (교정된 v6.3 필터 통과)
+       # 5. Rooting out noise streams lighter than the contextual gravitational mass and activating Casimir squeezing operations (Passing through the revised v6.3 filter)
         purified_perturbation, transmission = self.notch_filter(raw_perturbation, gate_mask)
         
-        # 6. 정제된 텐서 성분만 최종 가중치 공간에 안전하게 결합
+       # 6. 정제된 텐서 성분만 최종 가중치 공간에 안전하게 결합
+       # 6. Safely coupling only the purified tensor components into the final weight space
         final_latent_space = morphed_topology + purified_perturbation
         
         # 7. 배치 차원 전체에 대한 강력한 L2 Norm = 1.0 에너지 보존 정규화 제어
+        # 7. Rigid L2 Norm = 1.0 energy conservation normalization control across the entire batch dimension
         conserved_weights = F.normalize(
             final_latent_space, 
             p=2, 
@@ -383,7 +395,6 @@ class ProductionEnergyParityLayer(nn.Module):
 
 def main():
     print("========================================================================")
-    # 💡 [v6.3 최종화] 최적화 구조 및 수리 개정이 반영된 엔진 버전 명칭 최신화
     print("🌌 Egregore Advanced Engine: Batch Operations & Adaptive Topology Test (v6.3)")
     print("========================================================================")
     
@@ -391,17 +402,20 @@ def main():
     dim = AdaptiveTopologyConfig.LATENT_DIM
     
     # [KR] 매니폴드 마스터 레이어 및 v6.3 일반화형 기하 손실 함수 인스턴스화
+    # [EN] Instantiating the manifold master layer and v6.3 generalized geometric loss function
     alignment_layer = ProductionEnergyParityLayer(dim=dim)
     topological_loss_fn = AdvancedTopologicalLoss()
     
     # ------------------------------------------------------------------------
     # [KR] 메모리 주소(ID) 참조 기반의 안전한 층별 학습률(LLRD) 분리 기법
+    # [EN] Safe Layer-wise Rate Decay (LLRD) segregation technique based on memory address (ID) referencing
     # ------------------------------------------------------------------------
     gate_param_ids = {id(p) for p in alignment_layer.gate.parameters()}
     backbone_params = [p for p in alignment_layer.parameters() if id(p) not in gate_param_ids]
     gate_params = list(alignment_layer.gate.parameters())
 
     # [KR] 위상 붕괴 방지를 위해 게이트 학습률은 100배 낮추고 가중치 감쇠(Weight Decay) 해제
+    # [EN] Decouples weight decay and scales down the gate learning rate by 100x to prevent topological collapse
     optimizer = torch.optim.AdamW([
         {"params": backbone_params, "lr": 1e-4},
         {"params": gate_params, "lr": 1e-6, "weight_decay": 0.0}
@@ -413,20 +427,25 @@ def main():
     print("-" * 88)
 
     # [KR] 가상의 배치 최적화 3단계 시뮬레이션
+    # [EN] 3-step simulation of dummy batch optimization
     for epoch in range(3):
         # [KR] 무작위 배치 데이터 생성 및 기하 정규화
+        # [EN] Generation of random batch data and geometric normalization
         observer_batch = torch.randn(batch_size, dim)
         observer_batch = F.normalize(observer_batch, p=2, dim=-1, eps=AdaptiveTopologyConfig.EPSILON)
         
         # 1. [KR] Forward Pass 실행
+        # 1. [EN] Execute Forward Pass
         weights, morphed_topology, metrics = alignment_layer(observer_batch)
         
         # 2. [KR] 태스크 기본 역설 정규화 수행 (MSE 타겟 매칭)
+        # 2. [EN] Execute baseline task paradoxical normalization (MSE target matching)
         raw_target = torch.ones(batch_size, dim, device=weights.device) * 0.05
         target_batch = F.normalize(raw_target, p=2, dim=-1, eps=AdaptiveTopologyConfig.EPSILON)
         task_loss = F.mse_loss(weights, target_batch)
         
-        # 🌐 [v6.3 진화] 미분 연속성 및 Smooth Leaky 가이드레일 기반 결합 위상 손실 역산
+        # [v6.3 진화] 미분 연속성 및 Smooth Leaky 가이드레일 기반 결합 위상 손실 역산
+        # [v6.3 Evolved] Joint topological loss backpropagation based on differentiable continuity and smooth leaky guardrails
         topo_loss, topo_artifacts = topological_loss_fn(weights, observer_batch, metrics, morphed_topology)
         
         # 종합 물리 결합 손실 방정식 성립
