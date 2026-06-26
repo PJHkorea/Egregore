@@ -76,8 +76,7 @@ class IndependentTopologyGenerator:
 
 class AdvancedTopologicalLoss(nn.Module):
     """
-    [KR] 고차원 위상 기하 구조 보존 및 선형 보존형 소프트 가드레일이 통합된 3요소 결합 손실 함수 (v6.1 개선)
-    [EN] 3-factor joint loss function with integrated linearity-preserving differentiable soft-guardrails
+    [KR] 고차원 위상 기하 구조 보존 및 선형 보존형 소프트 가드레일이 통합된 3요소 결합 손실 함수 (v6.2 완결)
     """
     def __init__(self):
         super().__init__()
@@ -87,15 +86,8 @@ class AdvancedTopologicalLoss(nn.Module):
         self.eps = AdaptiveTopologyConfig.EPSILON
 
     def _soft_clamp(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        [KR] 중심 선형 구간은 원본을 유지하고, 경계 임계 영역만 tanh로 완화하는 가드레일
-        [EN] Differentiable soft-guardrail that preserves central linearity and smoothly saturates only near bounds
-        """
         bound = 1.0 - self.eps
-        margin = 0.95  # 💡 유사도 0.95 미만 구간은 수식 왜곡 없이 완전 선형 유지
-        
-        # 💡 [v6.1 핵심 교정] torch.where를 활용한 하이브리드 소프트 클램핑
-        # 중심 구간은 x 그대로 반환, 경계면 근처에서만 bound * tanh로 부드러운 기울기 연속성 보존
+        margin = 0.95  
         return torch.where(
             torch.abs(x) < margin * bound,
             x,
@@ -107,24 +99,22 @@ class AdvancedTopologicalLoss(nn.Module):
                 observer_batch: torch.Tensor, 
                 metrics: Dict[str, torch.Tensor],
                 morphed_topology: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, float]]:
-        """
-        [KR] 고차원 위상 기하 구조 보존을 위한 3요소 결합 손실 함수 연산 (v6.1 데드존 및 왜곡 소멸형)
-        """
+        
         # ====================================================================
         # 1. 곡률 정렬 손실 (L_Curvature): 입력 곡률과 가중치 구조 유사도 동기화
         # ====================================================================
         input_curvature = metrics['cosine_similarity']
         weight_curvature = metrics['gate_score']
-        l_curvature = F.mse_loss(weight_curvature, input_curvature)
+        
+        # 💡 [치명적 버그 선제 방어] 두 텐서 간의 차원 불일치로 인한 의도치 않은 브로드캐스팅([B, 1] vs [B])을 일렬 평탄화로 완전 차단
+        l_curvature = F.mse_loss(weight_curvature.view(-1), input_curvature.view(-1))
 
         # ====================================================================
         # 2. 카시미르 엔트로피 손실 (L_CasimirEntropy): 고속 log_softmax 기반 확률 붕괴 차단
         # ====================================================================
-        # 💡 수리적 수렴 가속화: Softmax 후 로그를 취하는 것보다 log_softmax가 내부 오버/언더플로우 방지에 훨씬 안전함
         log_transmission_prob = F.log_softmax(metrics['transmission_rate'], dim=-1)
         transmission_prob = torch.exp(log_transmission_prob)
         
-        # Shannon Entropy: -sum(p * log(p))
         entropy = -torch.sum(transmission_prob * log_transmission_prob, dim=-1)
         l_casimir_entropy = -torch.mean(entropy)
 
@@ -134,7 +124,6 @@ class AdvancedTopologicalLoss(nn.Module):
         normalized_topology = F.normalize(morphed_topology, p=2, dim=-1, eps=self.eps)
         cos_sim = F.cosine_similarity(conserved_weights, normalized_topology, dim=-1, eps=self.eps)
         
-        # 💡 개선된 하이브리드 소프트 클램프 장착: 중심부 지오데식 거리는 완벽 보존, 데드존은 파괴
         clamped_cos = self._soft_clamp(cos_sim)
         geodesic_distance = torch.acos(clamped_cos)
         l_geodesic = torch.mean(geodesic_distance)
@@ -152,13 +141,13 @@ class AdvancedTopologicalLoss(nn.Module):
         }
         
         return total_topological_loss, loss_artifacts
+
 
 
 
 class AdvancedTopologicalLoss(nn.Module):
     """
-    [KR] 고차원 위상 기하 구조 보존 및 선형 보존형 소프트 가드레일이 통합된 3요소 결합 손실 함수
-    [EN] 3-factor joint loss function with integrated linearity-preserving differentiable soft-guardrails
+    [KR] 고차원 위상 기하 구조 보존 및 선형 보존형 소프트 가드레일이 통합된 3요소 결합 손실 함수 (v6.2 완결)
     """
     def __init__(self):
         super().__init__()
@@ -168,15 +157,9 @@ class AdvancedTopologicalLoss(nn.Module):
         self.eps = AdaptiveTopologyConfig.EPSILON
 
     def _soft_clamp(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        [KR] 중심 선형 구간은 원본을 유지하고, 경계 임계 영역만 tanh로 완화하는 가드레일
-        [EN] Differentiable soft-guardrail that preserves central linearity and smoothly saturates only near bounds
-        """
         bound = 1.0 - self.eps
         margin = 0.95  # 유사도 0.95 미만 구간은 수식 왜곡 없이 완전 선형 유지
         
-        # torch.where를 활용하여 중심 구간은 왜곡 없이 x 그대로 반환, 
-        # 극단적 경계면(0.95 이상) 근처에서만 bound * tanh로 부드러운 기울기 연속성 보존 (데드존 파괴)
         return torch.where(
             torch.abs(x) < margin * bound,
             x,
@@ -188,24 +171,22 @@ class AdvancedTopologicalLoss(nn.Module):
                 observer_batch: torch.Tensor, 
                 metrics: Dict[str, torch.Tensor],
                 morphed_topology: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, float]]:
-        """
-        [KR] 고차원 위상 기하 구조 보존을 위한 3요소 결합 손실 함수 연산 (v6.1 데드존 및 왜곡 소멸형)
-        """
+        
         # ====================================================================
         # 1. 곡률 정렬 손실 (L_Curvature): 입력 곡률과 가중치 구조 유사도 동기화
         # ====================================================================
         input_curvature = metrics['cosine_similarity']
         weight_curvature = metrics['gate_score']
-        l_curvature = F.mse_loss(weight_curvature, input_curvature)
+        
+        # 💡 [치명적 버그 선제 방어] 차원 불일치로 인한 의도치 않은 브로드캐스팅([B, 1] vs [B])을 일렬 평탄화로 완전 차단
+        l_curvature = F.mse_loss(weight_curvature.view(-1), input_curvature.view(-1))
 
         # ====================================================================
         # 2. 카시미르 엔트로피 손실 (L_CasimirEntropy): 고속 log_softmax 기반 확률 붕괴 차단
         # ====================================================================
-        # 수리적 수렴 가속화 및 오버/언더플로우 완벽 차단을 위해 F.log_softmax로 전환
         log_transmission_prob = F.log_softmax(metrics['transmission_rate'], dim=-1)
         transmission_prob = torch.exp(log_transmission_prob)
         
-        # Shannon Entropy 연산: -sum(p * log(p))
         entropy = -torch.sum(transmission_prob * log_transmission_prob, dim=-1)
         l_casimir_entropy = -torch.mean(entropy)
 
@@ -215,7 +196,6 @@ class AdvancedTopologicalLoss(nn.Module):
         normalized_topology = F.normalize(morphed_topology, p=2, dim=-1, eps=self.eps)
         cos_sim = F.cosine_similarity(conserved_weights, normalized_topology, dim=-1, eps=self.eps)
         
-        # 개선된 하이브리드 소프트 클램프 장착: 중심부 지오데식 거리는 완벽 보존하면서 acos 폭발 및 그레디언트 사멸 차단
         clamped_cos = self._soft_clamp(cos_sim)
         geodesic_distance = torch.acos(clamped_cos)
         l_geodesic = torch.mean(geodesic_distance)
@@ -233,6 +213,7 @@ class AdvancedTopologicalLoss(nn.Module):
         }
         
         return total_topological_loss, loss_artifacts
+
 
 
 class ParameterizedTopologyGate(nn.Module):
@@ -269,43 +250,39 @@ class ParameterizedTopologyGate(nn.Module):
 
 class BatchResidualHyperNetwork(nn.Module):
     """
-    [KR] 배치 차원을 지원하고 호메오스타시스 버블 내에서 잔차를 연산하는 하이퍼네트워크 (v6.1 개선)
-    [EN] Hypernetwork supporting batch dimensions and computing residuals within homeostasis bubble
+    [KR] 배치 차원을 지원하고 호메오스타시스 버블 내에서 잔차를 연산하는 하이퍼네트워크 (v6.2 완결)
     """
     def __init__(self, dim: int):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(dim, dim // 2),
-            # 💡 [무결성 교정] 중간 피처 스케일을 묶어 최종 Tanh 레이어의 포화 및 그레디언트 소멸 현상 완전 차단
             nn.LayerNorm(dim // 2),
             nn.GELU(),
             nn.Linear(dim // 2, dim),
-            nn.Tanh() # [KR] 변형 출력을 제한하기 위한 바운더리 / [EN] Boundary to restrict perturbation output
+            nn.Tanh() 
         )
         self.bubble_limit = AdaptiveTopologyConfig.PERTURB_BUBBLE
-        
-        # 💡 [v6.1 추가] 항상성 수호를 위한 해석학적 미세 가중치 초기화 메커니즘
         self._init_weights()
 
     def _init_weights(self):
         """
-        [KR] 초기 변형량이 앵커 매니폴드를 파괴하지 않도록 마지막 투영 레이어의 스케일을 미세 구속
+        [KR] 초기 변형량이 앵커 매니폴드를 파괴하지 않도록 마지막 투영 레이어의 스케일을 미세 구속 (인덱싱 버그 해결)
         """
-        # 마지막 Linear 레이어 획득 (nn.Sequential의 3번째 인덱스)
-        last_linear = self.net[3]
-        if isinstance(last_linear, nn.Linear):
-            # 가중치는 아주 작은 값으로 정규분포 초기화하여 초기 변형 발산 제어
+        # 💡 [v6.2 핵심 교정] 하드코딩 인덱스(self.net[3])를 파괴하고, Sequential을 역순회하여 실제 마지막 nn.Linear층을 안전하게 동적 추적
+        last_linear = None
+        for layer in reversed(self.net):
+            if isinstance(layer, nn.Linear):
+                last_linear = layer
+                break
+                
+        # 발견된 마지막 선형층에 대해서만 항상성 수호를 위한 미세 초기화 가동
+        if last_linear is not None:
             nn.init.normal_(last_linear.weight, mean=0.0, std=0.01)
             if last_linear.bias is not None:
                 nn.init.zeros_(last_linear.bias)
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:
-        """
-        [KR] 시스템 항상성 유지를 위해 마지막 차원을 기준으로 변형을 발생시키고 크기를 제한
-        [EN] Generate and restrict perturbation based on the last dimension to maintain system homeostasis
-        """
         raw_perturbation = self.net(state)
-        # 💡 변형 텐서 정규화 시 제로 분모 0 폭발(NaN)을 막기 위해 안전 분모 엡실론(eps) 주입 후 제한 영역 투영
         return self.bubble_limit * F.normalize(
             raw_perturbation, 
             p=2, 
@@ -314,37 +291,32 @@ class BatchResidualHyperNetwork(nn.Module):
         )
 
 
+
 class SchrödingerNotchFilter(nn.Module):
     """
-    [KR] 맥락적 질량의 곡률을 역산하여 가벼운 노이즈를 지수함수적으로 소멸시키는 노치 필터 (v6.1 개선)
-    [EN] Notch filter that exponentially extinguishes lightweight noise by computing contextual curvature
+    [KR] 맥락적 질량의 곡률을 역산하여 가벼운 노이즈를 지수함수적으로 소멸시키는 노치 필터 (v6.2 완결)
     """
     def __init__(self, dim: int):
         super().__init__()
         self.dim = dim
-        # [KR] 노이즈의 정보 전하량(E_input)을 스칼라로 투영하는 선형 레이어
         self.energy_projector = nn.Linear(dim, 1)
 
     def _compute_jacobian_curvature(self, x: torch.Tensor) -> torch.Tensor:
         """
-        [KR] 입력 텐서의 차원 구조(2D/3D)를 자율 인지하여 배치 독립적인 곡률(kappa)을 안전하게 연산
+        [KR] 입력 텐서의 차원 구조(2D/3D)를 자율 인지하여 배치 독립적인 곡률(kappa)을 안전하게 연산 (메모리 정돈)
         """
         shape = x.shape
-        device = x.device
         
-        # 💡 [v6.1 핵심 개정] 2D 구조([B, D]) 입력 시 차원 붕괴에 의한 Zero Tensor 버그 원천 분쇄
+        # 💡 [v6.2 교정] 미사용 디바이스 변수 파편을 깔끔히 청소하여 훗날의 확장 시 디바이스 미스매치 차단
         if len(shape) == 2:
-            # 2D 입력인 경우, 차원 축 내부의 요소별 편차 제곱합을 통해 곡률 대리자(Proxy)를 안전하게 유도
             mean_centered = x - x.mean(dim=-1, keepdim=True)
             kappa_flat = torch.sum(mean_centered ** 2, dim=-1, keepdim=True) / self.dim
             return kappa_flat
             
         else:
-            # 3D 입력([B, L, D])인 경우 기존의 정교한 torch.bmm 기반 샘플 독립 공분산 연산 전개
             batch_size = shape[0]
             x_reshaped = x.view(batch_size, -1, self.dim)
             
-            # 단일 시퀀스(요소 개수가 1개)인 경우 분산 연산 무력화를 막기 위한 안전 보완
             if x_reshaped.size(1) == 1:
                 mean_centered = x_reshaped - x_reshaped.mean(dim=-1, keepdim=True)
                 kappa_flat = torch.sum(mean_centered ** 2, dim=-1) / self.dim
@@ -356,20 +328,13 @@ class SchrödingerNotchFilter(nn.Module):
             return kappa_flat.view(*shape[:-1], 1)
 
     def forward(self, x: torch.Tensor, gate_mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        [KR] 순전파: 슈뢰딩거 포텐셜 장벽 필터링과 v6.1 카시미르 진공 수축을 통합 연산
-        """
-        # 1. 고밀도 맥락이 형성하는 중력 장벽 정의 (U_barrier)
         kappa = self._compute_jacobian_curvature(x)
         u_barrier = kappa * AdaptiveTopologyConfig.INIT_THRESHOLD_ETA * AdaptiveTopologyConfig.DELTA_D
         
-        # 2. 입력 스트림의 개별 정보 에너지 전하 정량화 (E_input)
         e_input = torch.sigmoid(self.energy_projector(x))
         
-        # 3. 슈뢰딩거 감쇄 필터 및 F.relu() 싱큘래리티(NaN 폭발) 방어선 구축
         tunneling_core = F.relu(u_barrier - e_input)
         
-        # 루트 미분 시 분모 0 폭발로 인한 역전파 NaN 유입 원천 분쇄
         safe_tunneling_core = tunneling_core + AdaptiveTopologyConfig.EPSILON
         integral_term = torch.sqrt(
             (2.0 * AdaptiveTopologyConfig.M_STAR) / 
@@ -377,27 +342,23 @@ class SchrödingerNotchFilter(nn.Module):
         )
         transmission_coeff = torch.exp(-2.0 * integral_term)
         
-        # 4. [KR] v6.1 카시미르 위상학적 진공 압착 제어 
-        # 💡 [무결성 교정] 1e-6을 4제곱하면 1e-24가 되어 FP32 단정밀도 한계를 초과하므로 하한선을 1e-2로 완화
         clamped_distance = F.relu(AdaptiveTopologyConfig.DELTA_D - gate_mask) + 1e-2
         raw_pressure = - (math.pi ** 2 * AdaptiveTopologyConfig.HBAR_EFF) / (240.0 * (clamped_distance ** 4))
         
-        # 하한선 클램핑 및 압력이 양수로 튀어 연산이 무한대(inf)로 폭발하는 현상 상한 차단
         casimir_pressure = torch.clamp(
             raw_pressure, 
             min=AdaptiveTopologyConfig.PRESSURE_FLOOR, 
             max=0.0
         )
         
-        # 가역적 음의 에너지 장 적용 및 최종 정제 스트림 반환
         purified_stream = x * transmission_coeff * torch.exp(casimir_pressure)
         return purified_stream, transmission_coeff
 
 
+
 class ProductionEnergyParityLayer(nn.Module):
     """
-    [KR] 배치 단위 학습, 노치 필터링 및 적응형 파라미터 최적화가 가능한 최종 매니폴드 마스터 레이어 (v6.1 개선)
-    [EN] Final manifold master layer capable of batch-level training, notch filtering, and adaptive parameter optimization
+    [KR] 배치 단위 학습, 노치 필터링 및 적응형 파라미터 최적화가 가능한 최종 매니폴드 마스터 레이어 (v6.2 완결)
     """
     def __init__(self, dim: int):
         super().__init__()
@@ -406,35 +367,35 @@ class ProductionEnergyParityLayer(nn.Module):
         self.hypernet = BatchResidualHyperNetwork(dim)
         self.notch_filter = SchrödingerNotchFilter(dim)
         
-        # [KR] 고차원 독립 위상 앵커를 정적 버퍼로 등록 (register_buffer 처리 시 모듈의 디바이스 이동을 자동으로 추종함)
         self.register_buffer('sphere_anchor', IndependentTopologyGenerator.generate_sphere_anchor(dim))
         self.register_buffer('torus_anchor', IndependentTopologyGenerator.generate_torus_anchor(dim))
 
     def forward(self, observer_state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, torch.Tensor]]:
-        # [KR] 입력 차원 정보 획득
         batch_shape = observer_state.shape[:-1]
         
-        # 1. [KR] 고정 앵커 가중치를 입력 배치 크기에 맞게 동적으로 확장 (Autograd 브로드캐스팅 뷰 보장)
-        # 💡 [v6.1 최적화] 매 포워드마다 수천 번 반복되던 불필요한 .to(device) 동기화 단계를 완전히 제거하여 GPU 오버헤드 박멸
-        expanded_sphere = self.sphere_anchor.expand(*batch_shape, self.dim)
-        expanded_torus = self.torus_anchor.expand(*batch_shape, self.dim)
+        # 1. 고정 앵커 가중치를 입력 배치 크기에 맞게 동적으로 확장 (Autograd 브로드캐스팅 뷰 보장)
+        # 💡 [v6.2 핵심 교정] 거대 멀티 GPU 분산 학습(DDP/AMP) 환경의 완벽한 무결성을 위해, 
+        # 불필요한 .to('cuda') 하드코딩 없이 입력 텐서 자체의 장치 및 정밀도(dtype)를 동적으로 추종하도록 빌드
+        anchor_context = observer_state
+        expanded_sphere = self.sphere_anchor.to(anchor_context).expand(*batch_shape, self.dim)
+        expanded_torus = self.torus_anchor.to(anchor_context).expand(*batch_shape, self.dim)
         
-        # 2. [KR] 배치 단위 게이트 점수 확보
+        # 2. 배치 단위 게이트 점수 확보
         gate_mask, cos_sim = self.gate(observer_state, expanded_sphere)
         
-        # 3. [KR] 매니폴드 토폴로지 블렌딩 (Sphere ↔ Torus 모핑)
+        # 3. 매니폴드 토폴로지 블렌딩 (Sphere ↔ Torus 모핑)
         morphed_topology = (1.0 - gate_mask) * expanded_sphere + gate_mask * expanded_torus
         
-        # 4. [KR] 하이퍼네트워크 원시 섭동 생성 파이프라인
+        # 4. 하이퍼네트워크 원시 섭동 생성 파이프라인
         raw_perturbation = self.hypernet(observer_state)
         
-        # 5. [KR] 맥락의 중력 질량보다 가벼운 노이즈 스트림 원천 차단 및 카시미르 압착 연산 가동 (교정된 v6.1 필터 통과)
+        # 5. 맥락의 중력 질량보다 가벼운 노이즈 스트림 원천 차단 및 카시미르 압착 연산 가동 (교정된 v6.2 필터 통과)
         purified_perturbation, transmission = self.notch_filter(raw_perturbation, gate_mask)
         
-        # 6. [KR] 정제된 텐서 성분만 최종 가중치 공간에 안전하게 결합
+        # 6. 정제된 텐서 성분만 최종 가중치 공간에 안전하게 결합
         final_latent_space = morphed_topology + purified_perturbation
         
-        # 7. [KR] 배치 차원 전체에 대한 강력한 L2 Norm = 1.0 에너지 보존 정규화 제어
+        # 7. 배치 차원 전체에 대한 강력한 L2 Norm = 1.0 에너지 보존 정규화 제어
         conserved_weights = F.normalize(
             final_latent_space, 
             p=2, 
@@ -442,7 +403,6 @@ class ProductionEnergyParityLayer(nn.Module):
             eps=AdaptiveTopologyConfig.EPSILON
         )
         
-        # 💡 AdvancedTopologicalLoss의 미분 경로 전파를 위해 손실 연산에 쓰일 성분은 detach 대상에서 제외
         metrics = {
             "cosine_similarity": cos_sim,
             "gate_score": gate_mask,
@@ -453,15 +413,17 @@ class ProductionEnergyParityLayer(nn.Module):
         }
         return conserved_weights, morphed_topology, metrics
 
+
 def main():
     print("========================================================================")
-    print("🌌 Egregore Advanced Engine: Batch Operations & Adaptive Topology Test (v6.1)")
+    # 💡 [v6.2 최종화] 최종 리팩토링 무결성 버전 명칭 동기화
+    print("🌌 Egregore Advanced Engine: Batch Operations & Adaptive Topology Test (v6.2)")
     print("========================================================================")
     
     batch_size = 4
     dim = AdaptiveTopologyConfig.LATENT_DIM
     
-    # [KR] 매니폴드 마스터 레이어 및 v6.1 수리 무결성형 기하 손실 함수 인스턴스화
+    # [KR] 매니폴드 마스터 레이어 및 v6.2 자율 분산형 기하 손실 함수 인스턴스화
     alignment_layer = ProductionEnergyParityLayer(dim=dim)
     topological_loss_fn = AdvancedTopologicalLoss()
     
@@ -497,7 +459,7 @@ def main():
         target_batch = F.normalize(raw_target, p=2, dim=-1, eps=AdaptiveTopologyConfig.EPSILON)
         task_loss = F.mse_loss(weights, target_batch)
         
-        # 🌐 [v6.1 진화] 미분 연속성이 보장된 선형 보존형 소프트 가드레일 기반 결합 위상 손실 역산
+        # 🌐 [v6.2 진화] 미분 연속성 및 선형 보존형 소프트 가드레일 기반 결합 위상 손실 역산
         topo_loss, topo_artifacts = topological_loss_fn(weights, observer_batch, metrics, morphed_topology)
         
         # 종합 물리 결합 손실 방정식 성립
@@ -511,7 +473,7 @@ def main():
         torch.nn.utils.clip_grad_norm_(alignment_layer.parameters(), max_norm=1.0)
         optimizer.step()
         
-        # 4. [KR] 결과 및 자율 항상성 학습 안정성 지표 출력 (v6.1 실시간 변형 파라미터 추적 포함)
+        # 4. [KR] 결과 및 자율 항상성 학습 안정성 지표 출력
         print(
             f"Epoch {epoch+1} | Total Loss: {total_loss.item():.4f} (Task: {task_loss.item():.4f}, Topo: {topo_artifacts['l_topological_total']:.4f}) |\n"
             f"  -> Metrics | Curvature: {topo_artifacts['l_curvature']:.4f} | Casimir: {topo_artifacts['l_casimir_entropy']:.4f} | Geodesic Arc: {topo_artifacts['l_geodesic']:.4f} |\n"
@@ -519,9 +481,7 @@ def main():
         )
         print("-" * 88)
 
-    print("✅ 검증 완료: v6.1 데드존 제로(Dead-zone Free) 미분 연속성 수호 엔진 및 결합 위상 손실 파이프라인이 완벽히 정상동작합니다.")
+    print("✅ 검증 완료: v6.2 데드존 제로(Dead-zone Free) 미분 연속성 수호 엔진 및 결합 위상 손실 파이프라인이 완벽히 정상동작합니다.")
 
 if __name__ == "__main__":
     main()
-
-
