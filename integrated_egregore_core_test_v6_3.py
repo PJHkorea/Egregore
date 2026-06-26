@@ -26,12 +26,16 @@ class AdaptiveTopologyConfig:
     BARRIER_ETA: float = 0.5         # [KR] 위상 곡률 장벽 민감도 상수 (\eta) / [EN] Curvature sensitivity constant (\eta)
     
     # 💡 [수리 교정] 카시미르 압력의 마이너스 무한대 발산 및 그래디언트 사멸 방지용 하한 한계선 지정
+    # 💡 [Fix] Lower bound limit to prevent minus-infinity divergence and gradient vanishing of Casimir pressure
     PRESSURE_FLOOR: float = -20.0    # [KR] 카시미르 음의 필드 압력 최소 하한 제약선 / [EN] Minimum lower bound limit of negative Casimir field pressure
     
     # 💡 [v6.3 추가] 카시미르 분모 제로 폭발 방지 및 복합 정밀도(AMP) 언더플로우 제어용 구조적 안전 마진 상수
-    CASIMIR_MARGIN: float = 1e-2     # [KR] 4제곱 연산 후 1e-8 영역 수렴을 방어하는 하한 마진선
+    # 💡 [v6.3 Added] Structural safety margin constant to prevent denominator zero-explosion and control automatic mixed precision (AMP) underflow
+    CASIMIR_MARGIN: float = 1e-2     # [KR] 4제곱 연산 후 1e-8 영역 수렴을 방어하는 하한 마진선 # [EN] Lower bound margin defending against convergence to the 1e-8 region after power-of-4 operations
+
     
-    # 💡 [무결성] 역전파 NaN 폭발 방지용 미세 상수 (FP16/AMP 환경 고려 시 1e-7 ~ 1e-6 권장)
+   # 💡 [무결성] 역전파 NaN 폭발 방지용 미세 상수 (FP16/AMP 환경 고려 시 1e-7 ~ 1e-6 권장)
+   # 💡 [Integrity] Fine constant to prevent backpropagation NaN explosion (1e-7 to 1e-6 recommended for FP16/AMP environments)
     EPSILON: float = 1e-7
 
     # -------------------------------------------------------------------------
@@ -41,6 +45,7 @@ class AdaptiveTopologyConfig:
     LAMBDA_CASIMIR: float = 0.05       # [KR] 카시미르 정보 엔트로피 손실 가중치 (\lambda_2) / [EN] Casimir informational entropy weight (\lambda_2)
     
     # 💡 [v6.0 진화] 하드 클램프의 데드존을 파괴하는 소프트 측지선 호의 길이 손실 가중치 지정
+    # 💡 [v6.0 Evolved] Soft geodesic arc length loss weight crushing the gradient dead-zone of hard clamping
     LAMBDA_GEODESIC: float = 0.1       # [KR] 리만 다양체 소프트 측지선 손실 가중치 (\lambda_3) / [EN] Riemannian manifold soft geodesic weight (\lambda_3)
 
 
@@ -55,7 +60,8 @@ class IndependentTopologyGenerator:
         [KR] F.normalize 연산 없이 L2 Norm = 1.0을 정밀하게 만족하는 구면 기저 생성
         [EN] Generate a fixed spherical base weight satisfying L2 Norm = 1.0 with exact analytical scaling
         """
-        # 수학적 분석 결과: 모든 원소가 1 / sqrt(dim) 일 때 L2 Norm은 정확히 1.0이 됨
+       # 수학적 분석 결과: 모든 원소가 1 / sqrt(dim) 일 때 L2 Norm은 정확히 1.0이 됨
+       # Analytical Result: The L2 Norm becomes exactly 1.0 when all elements are 1 / sqrt(dim)
         val = 1.0 / math.sqrt(dim)
         return torch.full((dim,), fill_value=val, device=device, dtype=torch.float32)
 
@@ -70,6 +76,7 @@ class IndependentTopologyGenerator:
         
         half_dim = dim // 2
         # 💡 위상학적 무결성: 0과 2*pi의 중복 매핑을 방지하기 위해 마지막 단계를 배제한 등간격 격자 생성
+        # 💡 Topological Integrity: Generate an endpoint-free equidistant grid to prevent redundant mapping of 0 and 2*pi
         t = torch.arange(0, half_dim, device=device, dtype=torch.float32) * (2.0 * math.pi / half_dim)
         
         torus_vector = torch.cat([torch.cos(t), torch.sin(t)], dim=0)
@@ -80,6 +87,7 @@ class IndependentTopologyGenerator:
 class AdvancedTopologicalLoss(nn.Module):
     """
     [KR] 고차원 위상 기하 구조 보존 및 Smooth Leaky 가드레일이 통합된 3요소 결합 손실 함수 (v6.3 진화)
+    [EN] 3-factor joint loss function with integrated high-dimensional topological preservation and smooth leaky guardrails (v6.3 Evolved)
     """
     def __init__(self):
         super().__init__()
@@ -91,11 +99,14 @@ class AdvancedTopologicalLoss(nn.Module):
     def _soft_clamp(self, x: torch.Tensor) -> torch.Tensor:
         """
         [KR] 경계 영역 그레디언트 사멸을 방지하는 Smooth Leaky 가이드레일 (v6.3 수식 구현)
+        [EN] Smooth Leaky guardrails preventing gradient vanishing in boundary zones (v6.3 Formula Implementation)
         """
         bound = 1.0 - self.eps
-        margin = 0.95  # 유사도 0.95 미만 구간은 수식 왜곡 없이 완전 선형 유지
+        margin = 0.95  # 유사도 0.95 미만 구간은 수식 왜곡 없이 완전 선형 유지 # Preserves absolute linearity without formulaic distortion for intervals with similarity below 0.95
+
         
         # 💡 [v6.3 핵심 개정] 임계점 바깥에서도 미세한 기울기(0.01)를 부여하여 복원 그레디언트를 영구 보존
+        # 💡 [v6.3 Core Revision] Permanently preserves restoration gradients by injecting a fine slope (0.01) even outside the critical threshold
         leaky_slope = 0.01
         
         leaky_cos = torch.where(
@@ -103,7 +114,7 @@ class AdvancedTopologicalLoss(nn.Module):
             x,
             torch.sign(x) * (margin * bound + leaky_slope * (torch.abs(x) - margin * bound))
         )
-        # acos 폭발 절대 방어용 하드 가드레일 최종 결합
+        # acos 폭발 절대 방어용 하드 가드레일 최종 결합 # Final integration of the hard guardrail for absolute defense against acos explosion
         return torch.clamp(leaky_cos, min=-bound, max=bound)
 
     def forward(self, 
@@ -114,15 +125,18 @@ class AdvancedTopologicalLoss(nn.Module):
         
         # ====================================================================
         # 1. 곡률 정렬 손실 (L_Curvature): 입력 곡률과 가중치 구조 유사도 동기화
+        # 1. Curvature Alignment Loss (L_Curvature): Synchronizing input curvature with weight structural similarity
         # ====================================================================
         input_curvature = metrics['cosine_similarity']
         weight_curvature = metrics['gate_score']
         
         # [치명적 버그 선제 방어] 두 텐서 간의 차원 불일치로 인한 의도치 않은 브로드캐스팅([B, 1] vs [B])을 일렬 평탄화로 완전 차단
+        # [Proactive Defense Against Fatal Bug] Completely blocks unintended broadcasting ([B, 1] vs [B]) caused by dimension mismatch via 1D flattening
         l_curvature = F.mse_loss(weight_curvature.view(-1), input_curvature.view(-1))
 
         # ====================================================================
         # 2. 카시미르 엔트로피 손실 (L_CasimirEntropy): 고속 log_softmax 기반 확률 붕괴 차단
+        # 2. Casimir Entropy Loss (L_CasimirEntropy): Blocking probability collapse based on high-speed log_softmax 
         # ====================================================================
         log_transmission_prob = F.log_softmax(metrics['transmission_rate'], dim=-1)
         transmission_prob = torch.exp(log_transmission_prob)
@@ -132,17 +146,20 @@ class AdvancedTopologicalLoss(nn.Module):
 
         # ====================================================================
         # 3. 지오데식 정규화 (L_Geodesic): 왜곡 없는 소프트 가드레일 기반 호의 길이 연산
+        # 3. Geodesic Regularization (L_Geodesic): Distortion-free arc length calculation based on soft guardrails            
         # ====================================================================
         normalized_topology = F.normalize(morphed_topology, p=2, dim=-1, eps=self.eps)
         cos_sim = F.cosine_similarity(conserved_weights, normalized_topology, dim=-1, eps=self.eps)
         
         # 개선된 2중 Leaky 가이드레일 장착: 중심부 지오데식 거리는 완벽 보존하면서 경계면 그레디언트 약화 차단
+        # Equipped with Enhanced Dual Leaky Guardrails: Perfectly preserves central geodesic distance while preventing gradient attenuation near boundaries
         clamped_cos = self._soft_clamp(cos_sim)
         geodesic_distance = torch.acos(clamped_cos)
         l_geodesic = torch.mean(geodesic_distance)
 
         # ====================================================================
         # 4. 종합 위상 손실 컴파일 및 그래디언트 흐름 보호
+        # 4. Comprehensive Topological Loss Compilation and Gradient Flow Protection
         # ====================================================================
         total_topological_loss = (self.l1 * l_curvature) + (self.l2 * l_casimir_entropy) + (self.l3 * l_geodesic)
         
@@ -174,7 +191,8 @@ class ParameterizedTopologyGate(nn.Module):
         [KR] 배치 단위 입력을 안전하게 처리하는 전 구간 미분 가능 게이팅
         [EN] Fully differentiable gating safely processing batch-level inputs
         """
-        # 코사인 유사도 계산 시 분모 0 폭발(NaN)을 막기 위해 안전 분모 엡실론(eps) 주입 및 차원 정렬
+       # 코사인 유사도 계산 시 분모 0 폭발(NaN)을 막기 위해 안전 분모 엡실론(eps) 주입 및 차원 정렬
+       # Injects safety denominator epsilon (eps) and aligns dimensions to prevent division-by-zero explosion (NaN) during cosine similarity computation
         cos_sim = F.cosine_similarity(
             observer_state, 
             latent_weight, 
@@ -183,9 +201,11 @@ class ParameterizedTopologyGate(nn.Module):
         ).unsqueeze(-1)
         
         # 수리적 안정성을 위해 임계값(eta) 파라미터 범위를 Tanh를 통해 -1.0 ~ 1.0 체인 내로 구속
+        # Constrains the threshold (eta) parameter range within a -1.0 to 1.0 chain via Tanh for numerical stability
         bounded_eta = torch.tanh(self.raw_eta)
         
         # 데이터 맥락에 의해 동적으로 스위칭되는 소프트 게이팅 스코어 연산 (기울기 제어 alpha는 절대값 처리)
+        # Computes the soft gating score dynamically switched by data context (slope-control alpha is processed as absolute value)
         gate_score = torch.sigmoid(torch.abs(self.alpha) * (cos_sim - bounded_eta))
         
         return gate_score, cos_sim
@@ -194,6 +214,7 @@ class ParameterizedTopologyGate(nn.Module):
 class BatchResidualHyperNetwork(nn.Module):
     """
     [KR] 배치 차원을 지원하고 호메오스타시스 버블 내에서 잔차를 연산하는 하이퍼네트워크 (v6.3 진화)
+    [EN] Hypernetwork supporting batch dimensions and computing residuals within the homeostasis bubble (v6.3 Evolved)
     """
     def __init__(self, dim: int):
         super().__init__()
@@ -207,15 +228,19 @@ class BatchResidualHyperNetwork(nn.Module):
         self.bubble_limit = AdaptiveTopologyConfig.PERTURB_BUBBLE
         
         # 💡 [v6.3 핵심 개정] 수동 루프 순회를 완전히 도려내고, 파이토치 공식 내장 재귀 초기화 체계 매핑 가동
+        # 💡 [v6.3 Core Revision] Entirely eradicates manual loop traversal, activating PyTorch's official built-in recursive initialization mapping
         self.apply(self._init_weights)
 
     def _init_weights(self, module: nn.Module):
         """
         [KR] self.apply()를 통해 모델 내 선형 레이어를 자동 재귀 탐색하여 정밀 초기화 전개
+        [EN] Conducts precise initialization by automatically and recursively searching linear layers within the model via self.apply()
         """
         # 💡 객체지향 규격 수호: 트리 순회 중 발견된 선형 레이어(nn.Linear) 인스턴스만 선별 타격
+        # 💡 Upholding OOP Standards: Selectively targeting only nn.Linear layer instances discovered during tree traversal
         if isinstance(module, nn.Linear):
             # 💡 동적 투영층 판별: 최종 출력 차원 복원층(dim)인지 검사하여 항상성 수호를 위한 미세 가중치 할당
+            # 💡 Dynamic Projection Layer Identification: Checks if it is the final output dimension restoration layer (dim) to allocate fine weights for homeostasis protection
             if module.out_features == self.net[3].out_features:
                 nn.init.normal_(module.weight, mean=0.0, std=0.01)
             else:
@@ -227,6 +252,7 @@ class BatchResidualHyperNetwork(nn.Module):
     def forward(self, state: torch.Tensor) -> torch.Tensor:
         raw_perturbation = self.net(state)
         # 변형 텐서 정규화 시 제로 분모 0 폭발(NaN)을 막기 위해 안전 분모 엡실론(eps) 주입 후 제한 영역 투영
+        # Injects safety denominator epsilon (eps) to prevent division-by-zero explosion (NaN) during perturbation tensor normalization, followed by bounded-region projection
         return self.bubble_limit * F.normalize(
             raw_perturbation, 
             p=2, 
@@ -240,6 +266,7 @@ class BatchResidualHyperNetwork(nn.Module):
 class SchrödingerNotchFilter(nn.Module):
     """
     [KR] 맥락적 질량의 곡률을 역산하여 가벼운 노이즈를 지수함수적으로 소멸시키는 노치 필터 (v6.3 진화)
+    [EN] Notch filter that exponentially extinguishes lightweight noise by computing the inverse contextual mass curvature (v6.3 Evolved)
     """
     def __init__(self, dim: int):
         super().__init__()
@@ -249,11 +276,13 @@ class SchrödingerNotchFilter(nn.Module):
     def _compute_jacobian_curvature(self, x: torch.Tensor) -> torch.Tensor:
         """
         [KR] v6.3: 2D/3D/4D+ 배치를 단일 행렬로 평탄화하여 분기문 없이 곡률(kappa)을 통합 역산
+        [EN] v6.3: Flattens 2D/3D/4D+ batches into a single matrix to compute unified curvature (kappa) inverse without conditional branching
         """
         shape = x.shape
         x_flat = x.view(-1, self.dim)
         
         # [v6.3] 일반화 공간 내에서 균일 평균 중심화 및 분산 계산 (분기문 완전 소멸)
+        # [v6.3] Computes uniform mean-centering and variance within the generalized space (conditional branching completely extinguished)
         mean_centered = x_flat - x_flat.mean(dim=0, keepdim=True)
         kappa_flat = torch.sum(mean_centered ** 2, dim=-1, keepdim=True) / self.dim
         
@@ -262,6 +291,7 @@ class SchrödingerNotchFilter(nn.Module):
     def forward(self, x: torch.Tensor, gate_mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         [KR] v6.3: 슈뢰딩거 포텐셜 장벽 필터링과 글로벌 마진이 연동된 카시미르 진공 수축 통합 연산
+        [EN] v6.3: Unified computation of Schrödinger potential barrier filtering and Casimir vacuum squeezing interlocked with global margin
         """
         kappa = self._compute_jacobian_curvature(x)
         u_barrier = kappa * AdaptiveTopologyConfig.INIT_THRESHOLD_ETA * AdaptiveTopologyConfig.DELTA_D
