@@ -449,17 +449,21 @@ def main():
         topo_loss, topo_artifacts = topological_loss_fn(weights, observer_batch, metrics, morphed_topology)
         
         # 종합 물리 결합 손실 방정식 성립
+        # Formulating the comprehensive coupled physical loss equation
         total_loss = task_loss + topo_loss
         
         # 3. [KR] Backward Pass 및 가중치 업데이트 (옵티마이저 진행)
+        # 3. [EN] Execute Backward Pass and weight updates (Optimizer step running)
         optimizer.zero_grad()
         total_loss.backward()
         
-        # [KR] 그레디언트 스파이크 폭발 및 NaN 전파 원천 차단
+       # [KR] 그레디언트 스파이크 폭발 및 NaN 전파 원천 차단
+       # [EN] Rooting out gradient spike explosions and NaN propagation
         torch.nn.utils.clip_grad_norm_(alignment_layer.parameters(), max_norm=1.0)
         optimizer.step()
         
         # 4. [KR] 결과 및 자율 항상성 학습 안정성 지표 출력
+        # 4. [EN] Display optimization results and autonomous homeostasis learning stability metrics
         print(
             f"Epoch {epoch+1} | Total Loss: {total_loss.item():.4f} (Task: {task_loss.item():.4f}, Topo: {topo_artifacts['l_topological_total']:.4f}) |\n"
             f"  -> Metrics | Curvature: {topo_artifacts['l_curvature']:.4f} | Casimir: {topo_artifacts['l_casimir_entropy']:.4f} | Geodesic Arc: {topo_artifacts['l_geodesic']:.4f} |\n"
@@ -467,7 +471,7 @@ def main():
         )
         print("-" * 88)
 
-    print("✅ 검증 완료: v6.3 일반화 기하 위상 수호 엔진 및 결합 위상 손실 파이프라인이 완벽히 정상동작합니다.")
+    print("✅ 검증 완료: v6.3 일반화 기하 위상 수호 엔진 및 결합 위상 손실 파이프라인이 완벽히 정상동작합니다. ")
 
 if __name__ == "__main__":
     main()
