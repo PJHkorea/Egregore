@@ -71,6 +71,31 @@ Epoch 3 | Total Loss: 0.1062 (Task: 0.0654, Topo: 0.0408) |
 
 ---
 
+## 🌌 카시미르 정보 엔트로피($\mathcal{L}_{\text{CasimirEntropy}}$)의 수리 물리적 명확성
+
+본 엔진에서 명명한 **"카시미르 정보 엔트로피"**는 일반적인 엔트로피 정규화(Entropy Regularization)에 붙인 단순한 물리적 비유(Metaphor)가 아닙니다. 코드 레벨에서의 최종 수학적 연산 실체는 투과율 확률 분포에 대한 **표준 섀넌 엔트로피(Shannon Entropy)**가 맞으나, 이 확률 분포의 생성 기저가 카시미르 물리 법칙에 완벽히 종속(Downstream)되어 작동하는 닫힌 형태(Closed-form)의 인과 체인을 이룹니다.
+
+### 1. 물리 기하학적 당위성 및 메커니즘
+1. **공간적 경계 조건 ($\Delta d$)**: 시스템은 구면 다양체($S^{n}$)와 토러스 다양체($T^{n}\$) 사이의 기하학적 상태인 게이트 마스크 값($g$)을 '두 위상학적 장벽 간의 물리적 거리'로 해석합니다.
+2. **카시미르 압력 연산 ($P_{\text{Casimir}}$)**: `SchrödingerNotchFilter` 내부에서 이 거리를 기반으로 가상의 진공 압력을 역산하며, 이 음의 압력은 입력 정보 스트림의 채널 폭을 극단적으로 좁히는 압착(Squeezing) 제어를 수행합니다.
+3. **정보 붕괴 방어 가드레일**: 압력이 강해질수록 정보 확률 분포가 단일 상태로 프리징(Freezing)되거나 정보 붕괴(Information Collapse)를 일으키려 합니다. 이때 **카시미르 압착력에 저항하여 미시적인 정보 요동(Fluctuation)과 표현력 다양성을 영구 수호하기 위해 가동되는 척력**이므로 "카시미르 정보 엔트로피"라는 명명이 부여되었습니다.
+
+### 2. 닫힌 형태(Closed-form) 수식 체인
+이 인과적 연결 관계는 수리적으로 다음과 같은 엄밀한 복합 물리 계(System) 방정식으로 연결됩니다.
+
+$$P_{\text{Casimir}}(g) = -\frac{\pi^2 \hbar_{\text{eff}}}{240 \cdot (\Delta d - g + \text{CASIMIR}_{\text{MARGIN}})^4}$$
+
+$$\text{Stream}_{\text{purified}} = X \cdot \mathcal{T}_{\text{Schrödinger}} \cdot \exp\left(P_{\text{Casimir}}(g)\right)$$
+
+$$p_i = \text{Softmax}\left(\text{Stream}_{\text{purified}}\right)_i$$
+
+$$\mathcal{L}_{\text{CasimirEntropy}} = -\sum_{i} p_i \log p_i$$
+
+즉, 게이트가 결정한 기하학적 장벽 거리($g$)가 물리적 압력($P$)을 결정하고, 이 압력이 정보 스트림을 필터링하여 얻어낸 확률 분포($p$)의 엔트로피를 역제어하므로 본 손실 항은 카시미르 물리 필드와 완전 동기화되어 가동됩니다.
+
+
+---
+
 ## ⚖️ 라이센스 (License)
 
 본 프로젝트는 **GPLv3** 라이센스를 준수하며, 파생 모델 및 확장본은 동일한 오픈소스 조건 하에 공개 배포되어야 합니다.
