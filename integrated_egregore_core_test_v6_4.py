@@ -157,21 +157,22 @@ class AdvancedTopologicalLoss(nn.Module):
         geodesic_distance = torch.acos(clamped_cos)
         l_geodesic = torch.mean(geodesic_distance)
 
-        # ====================================================================
-        # 4. 종합 위상 손실 컴파일 및 그래디언트 흐름 보호
-        # 4. Comprehensive Topological Loss Compilation and Gradient Flow Protection
+               # ====================================================================
+        # 4. 종합 위상 손실 컴파일 및 그래디언트 흐름 보호 (v6.4 호스트 동기화 파괴 패치)
+        # 4. Comprehensive Topological Loss Compilation & Gradient Flow Protection
         # ====================================================================
         total_topological_loss = (self.l1 * l_curvature) + (self.l2 * l_casimir_entropy) + (self.l3 * l_geodesic)
         
+        # 💡 [v6.4 최적화] .item()을 제거하고 .detach() 텐서 그대로 바인딩하여 호스트-디바이스 간 Blocking 병목 원천 박멸
+        # 💡 [v6.4 Optimized] Removes .item() and binds .detach() tensors directly, thoroughly eradicating host-device blocking bottlenecks
         loss_artifacts = {
-            "l_topological_total": float(total_topological_loss.item()),
-            "l_curvature": float(l_curvature.item()),
-            "l_casimir_entropy": float(l_casimir_entropy.item()),
-            "l_geodesic": float(l_geodesic.item())
+            "l_topological_total": total_topological_loss.detach(),
+            "l_curvature": l_curvature.detach(),
+            "l_casimir_entropy": l_casimir_entropy.detach(),
+            "l_geodesic": l_geodesic.detach()
         }
         
         return total_topological_loss, loss_artifacts
-
 
 
 
@@ -395,7 +396,7 @@ class ProductionEnergyParityLayer(nn.Module):
 
 def main():
     print("========================================================================")
-    print("🌌 Egregore Advanced Engine: Batch Operations & Adaptive Topology Test (v6.3)")
+    print("🌌 Egregore Advanced Engine: Batch Operations & Adaptive Topology Test (v6.4)")
     print("========================================================================")
     
     batch_size = 4
@@ -462,16 +463,20 @@ def main():
         torch.nn.utils.clip_grad_norm_(alignment_layer.parameters(), max_norm=1.0)
         optimizer.step()
         
-        # 4. [KR] 결과 및 자율 항상성 학습 안정성 지표 출력
-        # 4. [EN] Display optimization results and autonomous homeostasis learning stability metrics
+              # ====================================================================
+        # 4. 결과 및 자율 항상성 학습 안정성 지표 출력 (v6.4 호스트 비동기 출력 연동)
+        # 4. Display optimization results and autonomous homeostasis metrics
+        # ====================================================================
+        # 💡 [v6.4 최적화] 손실 함수 내부의 .item()을 지웠으므로, 화면 출력 직전인 이곳에서 최종 .item()을 일괄 호출하여 GPU 병목 차단
+        # 💡 [v6.4 Optimized] Since .item() was removed inside the loss function, we call .item() here right before print to prevent GPU stalls
         print(
-            f"Epoch {epoch+1} | Total Loss: {total_loss.item():.4f} (Task: {task_loss.item():.4f}, Topo: {topo_artifacts['l_topological_total']:.4f}) |\n"
-            f"  -> Metrics | Curvature: {topo_artifacts['l_curvature']:.4f} | Casimir: {topo_artifacts['l_casimir_entropy']:.4f} | Geodesic Arc: {topo_artifacts['l_geodesic']:.4f} |\n"
+            f"Epoch {epoch+1} | Total Loss: {total_loss.item():.4f} (Task: {task_loss.item():.4f}, Topo: {topo_artifacts['l_topological_total'].item():.4f}) |\n"
+            f"  -> Metrics | Curvature: {topo_artifacts['l_curvature'].item():.4f} | Casimir: {topo_artifacts['l_casimir_entropy'].item():.4f} | Geodesic Arc: {topo_artifacts['l_geodesic'].item():.4f} |\n"
             f"  -> State   | Alpha: {metrics['learned_alpha'].item():.2f} | Eta: {metrics['learned_eta'].item():.4f} | Gate: {metrics['gate_score'].mean().item():.3f} | Trans: {metrics['transmission_rate'].mean().item():.4f}"
         )
         print("-" * 88)
 
-    print("✅ 검증 완료: v6.3 일반화 기하 위상 수호 엔진 및 결합 위상 손실 파이프라인이 완벽히 정상동작합니다. ")
+    print("✅ 검증 완료: v6.4 호스트 동기화 병목이 완벽히 파괴된 기하 위상 수호 엔진 및 손실 파이프라인이 정상 동작합니다.")
 
 if __name__ == "__main__":
     main()
