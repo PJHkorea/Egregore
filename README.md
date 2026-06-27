@@ -1,8 +1,8 @@
-# 🌌 Egregore: Topo-Squeezing Engine (v6.3)
+# 🌌 Egregore: Topo-Squeezing Engine (v6.4)
 
 ---
 
-## 🧭 System Identity (v6.3)
+## 🧭 System Identity (v6.4)
 
 ### 🔴 [KR] 정의
 Egregore v6.3은 잠재 공간(Latent Space) 내 데이터 밀도에 따라 구면/토러스 매니폴드를 미분 가능하게 동적 매핑합니다. 3요소 위상 손실(Topo-Loss)과 Smooth Leaky 가이드레일을 통합하여 수치 발산을 방지하고, 단정밀도(FP32) 환경에서 그레디언트 사멸을 진압하여 구조적 무결성을 100% 보장하는 최종형 튜닝 모델입니다.
@@ -12,19 +12,24 @@ Egregore v6.3 is a differentiable manifold (Sphere/Torus) morphing engine based 
 
 ---
 
-## 🚀 아키텍처 진화 개요 (Evolution Overview: v1.0 ➡ v6.3)
+## 🚀 아키텍처 진화 개요 (Evolution Overview: v1.0 ➡ v6.4)
 
-### 🔴 [KR] 구조적 결함 타파 및 v6.3 수리 무결성 완성
-본 저장소의 엔진은 기존 아키텍처의 수리적 한계를 엔지니어링적으로 극복하며 완전무결한 구조로 진화했습니다:
-1. **차원 자율 인지 및 연산 일반화 (v6.3)**: 기존 2D/3D 입력 간의 조건 분기(Branching) 오버헤드를 완전히 제거하고 `view(-1, dim)` 평탄화 통합 연산 구조를 구축하여 GPU 커널 처리량을 극대화했습니다.
-2. **소프트 가드레일 및 데드존 파괴 (v6.3)**: `torch.acos` 곡면 역산 과정에서 내적값이 경계면($\pm 1$)에 유착될 때 역전파 미분값이 사멸하는 하드 클램프의 데드존 결함을 하이브리드 `leaky_slope = 0.01` 소프트 가드레일 기믹으로 완벽하게 분쇄했습니다.
-3. **FP32 언더플로우 가드 및 대규모 분산 최적화 (v6.3)**: 카시미르 수축 공식 하단에서 $1e-6$ 상수가 4제곱되어 $1e-24$로 언더플로우 수축 폭발하던 취약점을 `CASIMIR_MARGIN = 1e-2`로 완화하여 혼합 정밀도(AMP/FP16) 환경까지 무결하게 대응합니다.
+### 🔴 [KR] 구조적 결함 타파 및 v6.4 수리·연산 무결성 완성
+본 저장소의 엔진은 기존 아키텍처의 수리적 한계와 가속기 병목을 엔지니어링적으로 극복하며 완전무결한 구조로 진화했습니다:
 
-### 🔵 [EN] Structural Defect Eradication & Mathematical Evolution to v6.3
+1. **차원 자율 인지 및 연산 일반화 (v6.3)**: 기존 2D/3D 입력 간의 조건 분기(Branching) 오버헤드를 완전히 제거하고 view(-1, dim) 평탄화 통합 연산 구조를 구축하여 GPU 커널 처리량을 극대화했습니다.
+2. **소프트 가드레일 및 데드존 파괴 (v6.3)**: torch.acos 곡면 역산 과정에서 내적값이 경계면($\pm 1$)에 유착될 때 역전파 미분값이 사멸하는 하드 클램프의 데드존 결함을 하이브리드 leaky_slope = 0.01 소프트 가드레일 기믹으로 완벽하게 분쇄했습니다.
+3. **FP32 언더플로우 가드 및 대규모 분산 최적화 (v6.3)**: 카시미르 수축 공식 하단에서 $1e-6$ 상수가 4제곱되어 $1e-24$로 언더플로우 수축 폭발하던 취약점을 CASIMIR_MARGIN = 1e-2로 완화하여 혼합 정밀도(AMP/FP16) 환경까지 무결하게 대응합니다.
+4. **호스트 동기화 차단 장벽 박멸 및 지연 연산 (v6.4)**: 손실 컴파일 파이프라인 내에서 무의식적인 호스트-디바이스 동기화 락(Sync Lock)을 유발하던 `.item()` 호출을 완벽히 소멸시켰습니다. 연산 그래프 유출을 막는 `.detach()` 고립 바인딩과 최외곽 루프 종료 시점으로의 지연 평가(Lazy Evaluation)를 적용하여 가속기 비동기 스트림을 100% 수호합니다.
+
+### 🔵 [EN] Structural Defect Eradication & Mathematical Evolution to v6.4
 The framework has progressively evolved to eliminate all hidden mathematical constraints and maximize execution efficiency:
-1. **Generalized Matrix Flatting (v6.3)**: Extinguished brittle 2D/3D conditional branching overhead by introducing a flattened unified `view(-1, dim)` pipeline, maximizing raw GPU kernel throughput.
-2. **Differentiable Smooth Leaky Guardrails (v6.3)**: Completely crushed the gradient-vanishing dead-zone of hard clamping by injecting a hybrid `leaky_slope = 0.01` mechanism near the boundary limits of inverse trigonometric operations.
-3. **FP32 Underflow Defense & Distributed Tuning (v6.3)**: Neutralized the structural underflow risk where legacy $1e-6$ scales collapsed into an untrackable $1e-24$ void under power operations, realigning the denominator bound with `CASIMIR_MARGIN = 1e-2` for mixed-precision stability.
+
+1. **Generalized Matrix Flatting (v6.3)**: Extinguished brittle 2D/3D conditional branching overhead by introducing a flattened unified view(-1, dim) pipeline, maximizing raw GPU kernel throughput.
+2. **Differentiable Smooth Leaky Guardrails (v6.3)**: Completely crushed the gradient-vanishing dead-zone of hard clamping by injecting a hybrid leaky_slope = 0.01 mechanism near the boundary limits of inverse trigonometric operations.
+3. **FP32 Underflow Defense & Distributed Tuning (v6.3)**: Neutralized the structural underflow risk where legacy $1e-6$ scales collapsed into an untrackable $1e-24$ void under power operations, realigning the denominator bound with CASIMIR_MARGIN = 1e-2 for mixed-precision stability.
+4. **Host-Device Blocking Eradication & Lazy Evaluation (v6.4)**: Dissolved hidden Host-Device synchronization bottlenecks by thoroughly purging `.item()` triggers inside the core forward loss compiler. By binding isolated `.detach()` tensors and relocating final scalar item retrieval to the outermost execution boundary, the framework guarantees uninterrupted asynchronous accelerator execution streams.
+
 
 ## 🛠 3. 핵심 컴포넌트 기술 명세 - A (Core Components: Normalization & Gating)
 
@@ -58,15 +63,15 @@ python integrated_egregore_core_test_v6.py
 ### ② 예상 출력 로그 (Expected Output Profile: v6.3)
 ```text
 ========================================================================
-🌌 Egregore Advanced Engine: Batch Operations & Adaptive Topology Test (v6.3)
+🌌 Egregore Advanced Engine: Batch Operations & Adaptive Topology Test (v6.4)
 ========================================================================
-[핵심 로그 생략: 에그레고르 v6.3의 고속 수렴 및 0.0001 단위의 정밀한 상태 모니터링 출력]
+[핵심 로그 생략: 에그레고르 v6.4의 고속 수렴 및 0.0001 단위의 정밀한 상태 모니터링 출력]
 ----------------------------------------------------------------------------------------
 Epoch 3 | Total Loss: 0.1062 (Task: 0.0654, Topo: 0.0408) |
   -> Metrics | Curvature: 0.0059 | Casimir: 0.0114 | Geodesic Arc: 0.0235 |
   -> State   | Alpha: 4.97 | Eta: 0.6908 | Gate: 0.551 | Trans: 0.8903
 ----------------------------------------------------------------------------------------
-✅ 검증 완료: v6.3 일반화 기하 위상 수호 엔진 및 결합 위상 손실 파이프라인이 정상동작합니다.
+✅ 검증 완료: v6.4 일반화 기하 위상 수호 엔진 및 결합 위상 손실 파이프라인이 정상동작합니다.
 ```
 
 ---
