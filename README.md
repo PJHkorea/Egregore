@@ -117,6 +117,33 @@ $$\mathcal{L}_{\text{CasimirEntropy}} = -\sum_{i} p_i \log p_i$$
 - In other words, the geometric barrier distance ($g$) determined by the gate dictates the physical pressure ($P$), which in turn filters the information stream to modulate the entropy of the resulting probability distribution ($p$). Therefore, this loss term operates in perfect synchronization with the Casimir physical field.
 
 ---
+## 🚫 기각된 최적화 패러다임 및 수리·물리적 반려 사유 (Rejected Architectural Paradigms)
+
+#### 🔴 [KR] 가속기 효율화를 위한 기각 내역
+
+1. **경계면 근처의 완만한 근사 함수(`tanh`, `ELU`) 도입 기각**
+   - **기각 사유**: `torch.where`와 `torch.sign` 연산의 분기(Branching) 오버헤드를 줄이기 위해 경계면을 `tanh`나 `ELU` 같은 완만한 비선형 곡선으로 대체하는 방안.
+   - **반려 논리**: 그러나 이 근사는 유사도 임계점($\pm 1$) 근처에서 미분값이 0으로 수렴하여 그래디언트가 사멸하는 **'위상학적 함몰(Topological Collapse)'** 결함(v5.0의 실패 원인)을 재발시킵니다. 본 엔진은 안심 구간(유사도 0.95 미만)에서 완벽한 선형 지오데식(측지선) 거리를 100% 보존해야 하므로 수리 기하학적 엄밀성을 위해 이 제안을 반려했습니다. 가속기 오버헤드는 수식 타협이 아닌 `torch.compile()`을 통한 Triton 커널 융합(Kernel Fusion)으로 하드웨어 레벨에서 $O(1)$ 제어합니다.
+
+2. **분산 학습(DDP) 환경 가속을 위한 거시적 통계 축(`dim=0`) 제거 기각**
+   - **기각 사유**: 데이터 병렬 학습(DDP) 환경에서 `SchrödingerNotchFilter` 내부의 `dim=0` 축 평균/분산 계산이 멀티 GPU 노드 간 고비용의 All-Reduce 통신 병목을 유발할 가능성.
+   - **반려 논리**: 만약 본 엔진이 개별 샘플의 자율성만 추구했다면 노드 간 통신이 없는 특성 축(`dim=-1`) 전환이 옳으나, 본 아키텍처는 단일 배치를 하나의 **'유기적인 물리 계(Universe)'**로 정의합니다. 거시적 카시미르 진공 압착 및 중력 장벽을 형성하기 위해 배치 전체의 글로벌 상수를 동기화하는 All-Reduce 비용은 시스템이 지불해야 하는 필연적인 물리적 엔트로피 비용(System Tax)이므로 `dim=0` 구조를 사수합니다.
+
+---
+
+#### 🔵 [EN] Rejected Optimization Paradigms & Engineering Justifications
+
+1. **Rejection of Smooth Boundary Approximations (`tanh`, `ELU`)**
+   - **Rejected Rationale**: Replacing the boundary guardrails with smooth non-linear curves like `tanh` or `ELU` to eliminate execution branching overhead from `torch.where` and `torch.sign`.
+   - **Counter-Argument**: This approximation forces the gradient to converge to 0 near critical limits ($\pm 1$), reintroducing the fatal **Topological Collapse** defect (the core failure mode of v5.0). Because the framework demands 100% strict preservation of linear Riemannian geodesic distance in safe zones (<0.95), formulaic distortion was rejected. Raw hardware overhead is bypassed by leveraging `torch.compile()` for Triton Kernel Fusion at $O(1)$ runtime efficiency.
+
+2. **Rejection of Macro Statistical Axis (`dim=0`) Elimination under DDP**
+   - **Rejected Rationale**: Modifying the `dim=0` mean/variance operations inside the `SchrödingerNotchFilter` due to high-cost All-Reduce synchronization bottlenecks across multi-GPU nodes in DDP configurations.
+   - **Counter-Argument**: While a native feature-axis (`dim=-1`) transition optimizes isolated micro-tokens, this architecture deliberately defines a single batch as a cohesive **Physical System (Universe)**. The All-Reduce overhead required to sync macro-Casimir vacuum squeezing across distributed nodes is treated as a mandatory systemic entropy cost (System Tax) required to preserve universal physical constants, solidifying the mathematical integrity of the `dim=0` topology.
+
+
+---
+
 
 ## ⚖️ 라이센스 (License)
 
