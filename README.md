@@ -5,10 +5,10 @@
 ## 🧭 System Identity (v6.4)
 
 ### 🔴 [KR] 정의
-Egregore v6.3은 잠재 공간(Latent Space) 내 데이터 밀도에 따라 구면/토러스 매니폴드를 미분 가능하게 동적 매핑합니다. 3요소 위상 손실(Topo-Loss)과 Smooth Leaky 가이드레일을 통합하여 수치 발산을 방지하고, 단정밀도(FP32) 환경에서 그레디언트 사멸을 진압하여 구조적 무결성을 100% 보장하는 최종형 튜닝 모델입니다.
+Egregore v6.4은 잠재 공간(Latent Space) 내 데이터 밀도에 따라 구면/토러스 매니폴드를 미분 가능하게 동적 매핑합니다. 3요소 위상 손실(Topo-Loss)과 Smooth Leaky 가이드레일을 통합하여 수치 발산을 방지하고, 단정밀도(FP32) 환경에서 그레디언트 사멸을 진압하여 구조적 무결성을 100% 보장하는 최종형 튜닝 모델입니다.
 
 ### 🔵 [EN] Definition
-Egregore v6.3 is a differentiable manifold (Sphere/Torus) morphing engine based on latent density. By integrating 3-factor topological loss and smooth leaky guardrails, it guarantees 100% structural integrity and eliminates gradient dead-zones, optimized for FP32 in distributed training.
+Egregore v6.4 is a differentiable manifold (Sphere/Torus) morphing engine based on latent density. By integrating 3-factor topological loss and smooth leaky guardrails, it guarantees 100% structural integrity and eliminates gradient dead-zones, optimized for FP32 in distributed training.
 
 ---
 
@@ -34,18 +34,18 @@ The framework has progressively evolved to eliminate all hidden mathematical con
 ## 🛠 3. 핵심 컴포넌트 기술 명세 - A (Core Components: Normalization & Gating)
 
 ### ① ProductionEnergyParityLayer (에너지 보존 엔진)
-*   **KR**: 잠재 공간 전체 배치 차원에 대해 강력한 **L2 Norm = 1.0 정규화**를 고정 동결합니다. `v6.3` 엔진은 순전파(`forward`) 시 매 텝마다 반복되던 고비용 `.to(device)` 동기화 검사 레이어를 완전히 제거하여 호스트-디바이스 간 스트림 병목(Lock)을 해소하고 가속기 가속력을 극한으로 향상했습니다.
-*   **EN**: Forcibly freezes strict **L2 Norm = 1.0 normalization** across all batches. The `v6.3` engine entirely removes costly `.to(device)` synchronization checks during the forward pass, eliminating host-device stream bottlenecks and optimizing raw accelerator throughput.
+*   **KR**: 잠재 공간 전체 배치 차원에 대해 강력한 **L2 Norm = 1.0 정규화**를 고정 동결합니다. `v6.4` 엔진은 순전파(`forward`) 시 매 텝마다 반복되던 고비용 `.to(device)` 동기화 검사 레이어를 완전히 제거하여 호스트-디바이스 간 스트림 병목(Lock)을 해소하고 가속기 가속력을 극한으로 향상했습니다.
+*   **EN**: Forcibly freezes strict **L2 Norm = 1.0 normalization** across all batches. The `v6.4` engine entirely removes costly `.to(device)` synchronization checks during the forward pass, eliminating host-device stream bottlenecks and optimizing raw accelerator throughput.
 
 ### ② ParameterizedTopologyGate (적응형 미분 가능 게이트)
 *   **핵심**: 가동 가속기 호환성을 위해 `dtype=torch.float32`를 강제하고 학습 가능한 파라미터로 전 구간 미분 가능한 소프트 게이팅을 구현.
 
 ### ③ BatchResidualHyperNetwork (항상성 제어 버블)
-*   **핵심**: 미세 섭동으로 구조적 항상성을 제어하며, `v6.3`에서 `self.apply()` 재귀 구조를 통해 선형 레이어의 고속 정밀 가중치 초기화를 자동화.
+*   **핵심**: 미세 섭동으로 구조적 항상성을 제어하며, `v6.4`에서 `self.apply()` 재귀 구조를 통해 선형 레이어의 고속 정밀 가중치 초기화를 자동화.
 
 
 ### ④ SchrödingerNotchFilter & Casimir Squeezing (양자 장론 필터 및 진공 압착)
-*   **KR**: `v6.3`은 샘플별 자코비안 곡률 역산을 통해 배치 간 데이터 오염을 격리합니다. 핵심 혁신은 다음과 같습니다:
+*   **KR**: `v6.4`은 샘플별 자코비안 곡률 역산을 통해 배치 간 데이터 오염을 격리합니다. 핵심 혁신은 다음과 같습니다:
     1.  **일반화 공간 평탄화**: 조건부 분기문 오버헤드를 도려내고 `view(-1, dim)` 통합 연산 구조를 채택하여 GPU 처리량을 극대화.
     2.  **수치 해석적 가드레일**: `CASIMIR_MARGIN = 1e-2`를 적용하여 카시미르 연산 시 FP32 수치 언더플로우 폭발을 방지.
 *   **EN**: Isolates inter-batch contamination by computing individual Jacobian curvatures. Key `v6.3` features include:
