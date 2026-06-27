@@ -58,7 +58,7 @@ The framework has progressively evolved to eliminate all hidden mathematical con
 * PyTorch >= 2.0, Python >= 3.8 환경에서 차원 통합 평탄화와 Smooth Leaky 가이드레일이 완전 결합된 `integrated_egregore_core_test_v6_4.py`를 실행하여 2D/3D 자율 인지, O(1) 해시 LLRD, 그리고 데드존 제로(Dead-zone Free) 위상 수호 엔진을 통합 검증합니다.
 
 ```bash
-python integrated_egregore_core_test_v6.py
+python integrated_egregore_core_test_v6_4.py
 ```
 ### ② 예상 출력 로그 (Expected Output Profile: v6.3)
 ```text
