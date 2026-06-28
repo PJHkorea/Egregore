@@ -87,6 +87,68 @@ total_loss = task_loss + topo_loss
 ```
 
 ---
+## 💻 4. 플러그인 연동 가이드 (Plug-in Integration Guide) - v6.4 개정판
+
+### 🧭 아키텍처 연동 핵심 규칙 (Core Integration Rules)
+
+* **🔴 [KR]**: 본 손실 함수는 분산 학습(DDP) 및 복합 정밀도(AMP) 환경에서의 연산 속도를 극대화하기 위해 **비동기 디커플링(Non-blocking Detach)** 구조로 설계되었습니다. `topo_artifacts` 내의 텐서들은 호스트 동기화 병목을 방지하기 위해 GPU 메모리에 랭크된 `.detach()` 상태로 반환됩니다. 따라서 학습 루프 중간에 개별 아티팩트의 `.item()`을 절대 호출하지 마십시오. 로깅을 위한 스칼라 값 변환은 반드시 `optimizer.step()`이 완료된 후, 출력 및 기록 직전에 일괄적으로 실행해야 GPU 연산 흐름이 끊기지 않습니다.
+* **🔵 [EN]**: This loss engine is architected with a **Non-blocking Detach** topology to maximize computation throughput across distributed (DDP) and mixed-precision (AMP) infrastructures. Metrics inside `topo_artifacts` are returned as GPU-resident `.detach()` tensors to fully eliminate host-device synchronization stalls. Do not execute `.item()` calls within the active optimization path. Scalar conversion for telemetry/logging must be strictly deferred to the post-step execution boundary, collapsing values right before terminal display or logging ingestion to maintain maximum pipeline concurrency.
+
+---
+
+### 💻 통합 코드 명세 (Integration Code Implementation)
+
+```python
+from AdvancedTopologicalLoss import AdvancedTopologicalLoss
+
+# [KR] 위상학적 결합 손실 함수 인스턴스화
+# [EN] Instantiate the joint topological loss function
+topo_loss_fn = AdvancedTopologicalLoss()
+
+# ... [KR] 학습 루프 내부 연동 / [EN] Inside the active training loop ...
+for epoch in range(epochs):
+    # ------------------------------------------------------------------
+    # 1. Forward Pass 및 베이스라인 태스크 손실 연산
+    # ------------------------------------------------------------------
+    # [KR] 모델의 마스터 레이어 통과 (가중치, 위상 구조, 통계 지표 확보)
+    # [EN] Pass through the model's master layer (secure weights, topology, and metrics)
+    weights, morphed_topology, metrics = alignment_layer(observer_batch)
+    task_loss = criterion(weights, target_batch)
+    
+    # ------------------------------------------------------------------
+    # 2. 비동기 위상 손실 역산 및 결합 (v6.4 호스트-디바이스 병목 제거)
+    # ------------------------------------------------------------------
+    # [KR] 미분 그래프 컨텍스트를 주입하여 위상 손실 계산 (.detach() 상태로 아티팩트 수신)
+    # [EN] Compute topological loss (artifacts are received as fully detached GPU tensors)
+    topo_loss, topo_artifacts = topo_loss_fn(weights, observer_batch, metrics, morphed_topology)
+    
+    # [KR] 최종 결합 최적화 손실 방정식 구성
+    # [EN] Construct the final joint optimization objective function
+    total_loss = task_loss + topo_loss
+    
+    # ------------------------------------------------------------------
+    # 3. Backward Pass & 그레디언트 제어 (GPU 내 가속 영역)
+    # ------------------------------------------------------------------
+    optimizer.zero_grad()
+    total_loss.backward()
+    torch.nn.utils.clip_grad_norm_(alignment_layer.parameters(), max_norm=1.0)
+    optimizer.step()
+    
+    # ------------------------------------------------------------------
+    # 4. 지연된 호스트 스칼라 변환 (Lazy .item() Evaluation - 최적화 핵심)
+    # ------------------------------------------------------------------
+    # 💡 [KR] 모든 GPU 연산이 끝나고 화면에 출력하거나 로깅 장치(Wandb 등)에 넘기기 직전 이곳에서만 .item() 일괄 실행
+    # 💡 [EN] Execute all .item() queries here at the terminal boundary to completely isolate GPU blocking stalls
+    print(
+        f"Epoch {epoch+1} | "
+        f"Total: {total_loss.item():.4f} | "
+        f"Task: {task_loss.item():.4f} | "
+        f"Topo: {topo_artifacts['l_topological_total'].item():.4f} | "
+        f"Geodesic: {topo_artifacts['l_geodesic'].item():.4f}"
+    )
+```
+
+---
 
 ## ⚖️ 5. 라이센스 조항 (License Clause)
 
