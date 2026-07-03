@@ -808,10 +808,9 @@ def print_enterprise_homeostasis_metrics_profile(
 ):
     """JAX의 비동기 연산 그래프(Asynchronous Execution)를 명시적으로 해제하여 실시간 항상성 지표를 콘솔에 출력합니다."""
     
-    # 💡 [XLA 지연 평가 및 비블로킹 데이터 전송 구현]
+    # 1. 💡 [XLA 지연 평가 및 비블로킹 데이터 전송 구현]
     # 장치(Device) 단에서 실행 중인 비동기 스트림이 완료될 때까지 호스트(Host) CPU의 대기를 
     # 콘솔 인쇄 직전으로 유예하는 .block_until_ready 기믹을 적용하여 연산 병렬성을 극대화합니다.
-    
     clean_total_loss = float(total_loss.block_until_ready())
     clean_task_loss = float(task_loss.block_until_ready())
     clean_topo_total = float(topo_artifacts["l_topological_total"].block_until_ready())
@@ -823,7 +822,10 @@ def print_enterprise_homeostasis_metrics_profile(
     clean_alpha = float(metrics["learned_alpha"].block_until_ready())
     clean_eta = float(metrics["learned_eta"].block_until_ready())
     
-    # [인프라 최적화] 다차원 배치 확장 시 스칼라 변환 크래시를 방지하기 위해 전체 축 전역 리덕션 평균 명시
+    # [인프라 최적화] 앞단 마스터 레이어에서 고도화 완료된 수치 정규화 노름(l2_norm) 추적 트랙 추가 바인딩
+    clean_l2_norm = float(jnp.mean(metrics["l2_norm"]).block_until_ready())
+    
+    # 다차원 배치 확장 시 스칼라 변환 크래시를 방지하기 위해 전체 축 전역 리덕션 평균 명시 및 호스트 이식
     clean_gate_mean = float(jnp.mean(metrics["gate_score"]).block_until_ready())
     clean_trans_mean = float(jnp.mean(metrics["transmission_rate"]).block_until_ready())
 
@@ -832,9 +834,11 @@ def print_enterprise_homeostasis_metrics_profile(
         f"JAX-Epoch {epoch + 1} | Consolidated Loss: {clean_total_loss:.4f} "
         f"[Task Objective: {clean_task_loss:.4f} || Geo-Topological: {clean_topo_total:.4f}]\n"
         f"  -> Diagnostics | Curvature Sync: {clean_curvature:.4f} | Casimir Entropy: {clean_casimir:.4f} | Riemannian Geodesic Arc: {clean_geodesic:.4f}\n"
-        f"  -> State Space | Slope Alpha: {clean_alpha:.2f} | Bounded Eta: {clean_eta:.4f} | Mean Gate Mask: {clean_gate_mean:.3f} | Squeezing Transmission: {clean_trans_mean:.4f}"
+        f"  -> State Space | Slope Alpha: {clean_alpha:.2f} | Bounded Eta: {clean_eta:.4f} | L2 Energy Norm: {clean_l2_norm:.4f} |\n"
+        f"  -> Activations | Mean Gate Mask: {clean_gate_mean:.3f} | Squeezing Transmission: {clean_trans_mean:.4f}"
     )
     print("-" * 88)
+
 
 def execute_main_production_entry():
     """모든 가속기 컴포넌트의 난수 상태 및 파라미터를 무상태성(Stateless) 형태로 총괄 제어하는 파이프라인 진입점입니다."""
@@ -849,10 +853,11 @@ def execute_main_production_entry():
     # 3. JAX 무상태성 난수 전파 규칙에 따라 계층별 컴포넌트 초기화용 독립 서브 키 분할 수행
     master_seed_key, subkey1, subkey2 = jax.random.split(master_seed_key, 3)
     
-    # [인프라 최적화] 전산 인프라 전역의 데이터 정밀도 설정을 동적 추적 및 단일화 제어
+    # 전산 인프라 전역의 데이터 정밀도 설정을 동적 추적 및 단일화 제어
     target_dtype = jnp.float32
     
-    # 4. 신경망 가속 그래프에 주입할 무상태성 중중첩 파라미터 딕셔너리 트리 최종 구성
+    # 4. [인프라 최적화] 가속기 오버헤드를 제어하도록 초기화 팩토리 난수 인자 정밀도 인라인(Inline) 매핑
+    # 신경망 가속 그래프에 주입할 무상태성 중중첩 파라미터 딕셔너리 트리 최종 구성
     master_parameters = {
         "gate": {
             "gate_alpha_slope": jnp.array(config_context["gating_initial_slope"], dtype=target_dtype),
@@ -860,13 +865,18 @@ def execute_main_production_entry():
         },
         "hypernet": initialize_hypernetwork_weights(subkey1, spatial_dim, dtype=target_dtype),
         "notch_filter": {
+            # jax.random.normal 프리미티브 자체에 dtype을 바인딩하여 순간 정밀도 오염 차단
             "projector_weight": jax.random.normal(subkey2, (spatial_dim, 1), dtype=target_dtype) * 0.02,
             "projector_bias": jnp.zeros((1,), dtype=target_dtype)
         }
     }
-    
-    # 5. 최종 가속 테스트 3단계 배치 시뮬레이터 루프 구동
+
+     # 5. 최종 가속 테스트 3단계 배치 시뮬레이터 루프 구동
     run_pure_3step_simulation(master_seed_key, config_context, master_parameters)
+    
+    # [인프라 최적화] 메인 프로그램이 안전하게 물리적으로 종료되기 전, 
+    # 가속기 내부의 모든 비동기 연산 스트림이 하드웨어 레벨에서 100% 무결하게 끝났음을 동기화 확인
+    jax.effects_barrier()
     print("✅ 검증 완료: 비블로킹(Non-blocking) 연산 파이프라인 최적화가 적용된 위상 기하학 가속 엔진의 무결성 검증을 종결합니다.")
 
 # ====================================================================
@@ -875,4 +885,3 @@ def execute_main_production_entry():
 if __name__ == "__main__":
     # 무상태성 아키텍처 환경에서 독립형 모듈로 안전하게 인스턴스화 및 테스트 프로세스 구동
     execute_main_production_entry()
-
