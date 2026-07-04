@@ -1,4 +1,7 @@
-# This project utilizes the Google JAX/Optax ecosystem (Apache License 2.0).
+
+# Copyright (c) 2026 PJHkorea. All rights reserved.
+# This code is a JAX/Optax re-implementation engineered from the original PyTorch version.
+
 
 import jax
 import jax.numpy as jnp
