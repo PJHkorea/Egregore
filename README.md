@@ -139,7 +139,7 @@ $$ \text{Compiling Track: } dim \in \mathbb{Z}^{+} \xrightarrow{\text{static}} \
 
 ---
 
-## 🌌 JAX 독점 인프라 프리미티브 기반의 아키텍처적 초월 (Architectural Transcendence via JAX-Exclusive Core Primitives)
+## 🌌 JAX 고유 기능을 활용한 구조적 변경 (Structural Modifications Utilizing JAX-Unique Features)
 
 - 본 프로젝트는 단순 프레임워크 변환을 넘어, JAX 생태계의 고유한 전산수학적 독점성(Exclusive Core Primitives)과 XLA 컴파일러 최적화 사양을 활용해 아키텍처적 큰 변화를 달성했습니다.
 - This project goes beyond a simple framework translation; it achieves a major architectural change by utilizing the unique computational-mathematical exclusivity of the JAX ecosystem and XLA compiler optimization specifications.
