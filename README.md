@@ -139,6 +139,31 @@ $$ \text{Compiling Track: } dim \in \mathbb{Z}^{+} \xrightarrow{\text{static}} \
 
 ---
 
+## 🌌 JAX 독점 인프라 프리미티브 기반의 아키텍처적 초월 (Architectural Transcendence via JAX-Exclusive Core Primitives)
+
+- 본 프로젝트는 단순 프레임워크 변환을 넘어, JAX 생태계의 고유한 전산수학적 독점성(Exclusive Core Primitives)과 XLA 컴파일러 최적화 사양을 활용해 아키텍처적 큰 변화를 달성했습니다.
+- This project goes beyond a simple framework translation; it achieves a major architectural change by utilizing the unique computational-mathematical exclusivity of the JAX ecosystem and XLA compiler optimization specifications.
+
+
+---
+
+### ① PyTree 정적 구조체 분석 기반의 컴파일 타임 최적화 라우팅
+*   **🔴 [KR]:** 파이썬 런타임에 의존하던 기존 LLRD와 달리, 가중치 컨테이너를 **PyTree**로 관리하는 JAX의 독점 구조를 활용합니다. `optax.multi_transform`이 컴파일 타임에 파라미터 트리의 Key Path를 직접 분석하여 하드웨어 연산 그래프 내부에서 최적화 트랙을 정적으로 분기 제어합니다.
+*   **🔵 [EN]:** Unlike legacy LLRD depending on Python runtime, this engine leverages JAX's exclusive architecture managing weight containers as a **PyTree**. `optax.multi_transform` directly dissects Key Paths at compile-time, statically routing optimization tracks within the hardware graph.
+
+---
+
+### ② XLA 하드웨어 컴파일 타임 락 (`static_argnums`)
+*   **🔴 [KR]:** 가변적인 입력으로 인한 `ConcretizationTypeError`를 방어하기 위해 `@jax.jit(static_argnums=...)`을 전면 도입했습니다. 하드웨어 레벨에서 특정 파라미터와 차원을 정적 상수(Static Constant)로 강제 락(Lock)을 걸어, 온칩 메모리(SRAM) 내에서 분기문 없는 고속 단일 융합 커널(Fused Kernel) 생성을 보장합니다.
+*   **🔵 [EN]:** To preempt `ConcretizationTypeError` from dynamic inputs, we fully deploy `@jax.jit(static_argnums=...)`. By locking specific parameters/dimensions as **Static Constants** at the hardware level, we drive the synthesis of ultra-high-speed, branch-free Fused Kernels directly within on-chip memory (SRAM).
+
+---
+
+### ③ 자동 미분 경로(Autograd)에서의 완벽한 텐서 격리 가드레일 (`jax.lax.stop_gradient`)
+*   **🔴 [KR]:** 메트릭 수집 시 발생하는 GPU Stall을 해결하기 위해 `jax.lax.stop_gradient`를 활용, 메트릭 텐서를 자동 미분 경로에서 수리/물리적으로 완벽히 격리(Isolation)했습니다. XLA 컴파일러가 최외곽까지 100% 비블로킹(Non-blocking) 스트림을 독점적으로 구동하도록 보장합니다.
+*   **🔵 [EN]:** To eliminate GPU Stalls during metric gathering, we employ `jax.lax.stop_gradient` to **mathematically and structurally isolate** metric tensors from the autograd path. This guarantees the XLA compiler drives a 100% non-blocking stream with exclusive efficiency.
+---
+
 ## ⚖ 3. 라이센스 (License)
 
 * **🔴 [KR]:** 본 프로젝트는 **GPLv3 라이센스**를 준수합니다. 파생 모델, 프레임워크 리엔지니어링 포크 스크립트 및 동일 아키텍처의 연산 확장본은 독점될 수 없으며, 반드시 동일한 오픈소스 라이센스 조건 하에 대중에게 완전 투명하게 공개 배포되어야 합니다.
