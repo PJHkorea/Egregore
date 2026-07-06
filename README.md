@@ -119,3 +119,10 @@ $$\text{Update} = (u \times \text{lr}) + (p \times \text{wd} \times \text{wd-act
 | **XLA Kernel Footprint** | Fragmented instruction routing paths | **Single Fused Kernel (Force-Fused)** | Zero Hardware Branch Stalls |
 | **Mathematical Precision** | Inherent momentum dynamics distortion | **100% Exact AdamW LLRD Formulation** | Algebraic Sign Synchronization ($+$) |
 | **Host Compilation Stability** | Redundant tracing & Host OOM vulnerability | **Single-Pass Squeeze & Leaf-Level Reconstruction** | Total Elimination of CPU Memory Leaks |
+
+
+---
+
+## ⚖ License
+
+* This project is governed by the **GPLv3 License**. Derivative models, framework re-engineering fork scripts, and computational extensions of identical architecture cannot be made proprietary; they must be fully disclosed and distributed to the public under the exact same open-source licensing terms.
