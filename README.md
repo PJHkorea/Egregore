@@ -27,7 +27,12 @@
 * **구현 방식**: (`PJHkorea/egregore-core-jax/README_OPTIMIZERS.md`)에 증명된 대수적 부호 합치 공식을 코어 세그먼트에 이식했습니다.
 * **개선 효과**: 가속기 메모리상에서 모멘텀 왜곡 없이 오리지널 AdamW LLRD 공식 규격을 재현합니다.
 
-$$\text{Update} = (u \times \text{lr}) + (p \times \text{wd} \times \text{lr})$$
+$$\text{Update} = (u \times \text{lr}) + (p \times \text{wd} \times \text{wd-activation-gate} \times \text{lr})$$
+
+
+
+
+
 
 *   $u$: Adam 모멘텀 업데이트 벡터
 *   $\text{lr}$: 계층별 차등 학습률 (LLRD)
