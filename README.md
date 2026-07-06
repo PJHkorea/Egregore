@@ -24,7 +24,7 @@
 * **문제점**: 계층별 차등 학습률(LLRD) 마스크와 결합할 때, Adam 내부 모멘텀 계산 식에 가중치 감쇠 계수가 원천 왜곡되어 유입되는 **이중 감쇠(Double-Dipping)** 결함이 발생했습니다.
 
 ### ✨ 신 버전 (`CR_egregore_jax_test_v2.py`)
-* **구현 방식**: 백서(`README_OPTIMIZERS.md`)에 증명된 대수적 부호 합치 공식을 코어 세그먼트에 이식했습니다.
+* **구현 방식**: (`PJHkorea/egregore-core-jax/README_OPTIMIZERS.md`)에 증명된 대수적 부호 합치 공식을 코어 세그먼트에 이식했습니다.
 * **개선 효과**: 가속기 메모리상에서 모멘텀 왜곡 없이 오리지널 AdamW LLRD 공식 규격을 재현합니다.
 
 $$\text{Update} = (u \times \text{lr}) + (p \times \text{wd} \times \text{lr})$$
@@ -34,6 +34,8 @@ $$\text{Update} = (u \times \text{lr}) + (p \times \text{wd} \times \text{lr})$$
 *   $p$: 현재 가중치 매개변수 (Parameter)
 *   $\text{wd}$: 가중치 감쇠 계수 (Weight Decay)
 
+> 💡 **전산학적 부호 합치 보충 명세**
+> `optax.adam` 백엔드가 자체 연산을 거쳐 반환하는 `updates` ($u$) 벡터는 가축치에 바로 더해질 수 있도록 이미 **음수 변위 방향성(Negative Gradient Direction)**이 내장되어 있습니다. 따라서 가중치를 물리적으로 줄여야 하는 Weight Decay 성분의 음수 스케일링 방향과 무결하게 동기화하기 위해 대수학적으로 빼기($-$)가 아닌 **더하기($+$) 기호로 결합**하는 것이 수치해석적으로 완전히 올바른 구현입니다.
 
 ---
 
