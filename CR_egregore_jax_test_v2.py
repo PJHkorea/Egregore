@@ -32,7 +32,7 @@ def initialize_enterprise_topology_context() -> Dict[str, Any]:
     casimir_singularity_margin = 0.01             # [KR] 카시미르 4제곱 연산 시 부동소수점 하한 마진선 / [EN] Floating-point lower bound margin for Casimir quartic computations
 
     
-      # 3. 런타임 파이프라인 주입용 기하 물리 토폴로지 상수 컨텍스트 구성
+    # 3. 런타임 파이프라인 주입용 기하 물리 토폴로지 상수 컨텍스트 구성
     # [EN] 3. Configure the geometric-physical topology constant context for runtime pipeline injection
     topology_context = {
         # 매니폴드 베이스 및 게이팅 파라미터
@@ -93,7 +93,7 @@ def build_toroidal_manifold_base(dim: int, config: Dict[str, Any]) -> jax.Array:
     [EN] Generates a toroidal basis vector mapping uniform phase rings within the [0, 2*pi) interval. """
 
     
-      # 1. 정적 인자로 주입된 차원을 기반으로 삼각함수 분할 사상 수행 (트레이싱 무결성 확보)
+    # 1. 정적 인자로 주입된 차원을 기반으로 삼각함수 분할 사상 수행 (트레이싱 무결성 확보)
     # [EN] 1. Perform trigonometric split mapping based on the injected static dimension (ensuring tracing integrity)
     half_space_dim = dim // 2
     
@@ -202,7 +202,7 @@ def compile_comprehensive_topological_loss(
     l1_curvature_weight, l2_casimir_weight, l3_geodesic_weight = compile_geometric_loss_infrastructure(config)
 
 
-       # ====================================================================
+    # ====================================================================
     # 1. 곡률 정렬 손실 (L_Curvature): 입력 데이터 곡률과 가중치 게이팅 스코어 구조 동기화
     # [EN] 1. Curvature Alignment Loss (L_Curvature): Synchronize input data curvature with weight gating score structure
     # ====================================================================
@@ -239,7 +239,7 @@ def compile_comprehensive_topological_loss(
     entropy_vector = -jnp.sum(elementwise_entropy, axis=target_axis)
     l_casimir_entropy = jnp.mean(entropy_vector)
 
-      # ====================================================================
+    # ====================================================================
     # 3. 지오데식 정규화 (L_Geodesic): 매니폴드 앵커와 보존 가중치 간의 호의 길이 계산
     # [EN] 3. Geodesic Regularization (L_Geodesic): Compute the arc length between the manifold anchor and conserved weights
     # ====================================================================
@@ -356,7 +356,7 @@ def execute_adaptive_topology_gating(
     cos_sim = jnp.expand_dims(raw_cos_sim, axis=target_axis)
 
 
-      # ====================================================================
+    # ====================================================================
     # 2. 임계값 경계 제한 및 소프트 게이팅 마스크 변환 체인
     # [EN] 2. Threshold Boundary Restriction and Soft Gating Mask Transformation Chain
     # ====================================================================
@@ -463,7 +463,7 @@ def execute_residual_hypernetwork(
     x = jnp.dot(state_tensor, network_params["w1"]) + network_params["b1"]
 
     
-       # 2. XLA 하드웨어 가속기 친화적인 축 정렬 기반 계층 정규화(Layer Information Normalization) 연산
+    # 2. XLA 하드웨어 가속기 친화적인 축 정렬 기반 계층 정규화(Layer Information Normalization) 연산
     # [EN] 2. Execute XLA hardware accelerator-friendly layer information normalization based on axis alignment
     ln_mean = jnp.mean(x, axis=feature_axis, keepdims=True)
     ln_var = jnp.var(x, axis=feature_axis, keepdims=True)
@@ -697,7 +697,7 @@ def execute_production_energy_parity_layer(
     )
 
 
-      # 5. 슈뢰딩거 포텐셜 장벽 제어 및 카시미르 음압 기반 스트림 노치 필터링 수행 (정적 인프라 필터 호출)
+    # 5. 슈뢰딩거 포텐셜 장벽 제어 및 카시미르 음압 기반 스트림 노치 필터링 수행 (정적 인프라 필터 호출)
     # [EN] 5. Execute stream notch filtering based on Schrödinger potential barrier control and Casimir negative pressure (invoking the static infrastructure filter)
     purified_perturbation, transmission = execute_schrodinger_casimir_filter(
         raw_perturbation, gate_mask, master_params["notch_filter"], config
@@ -770,7 +770,7 @@ def configure_enterprise_silicon_mux_optimizer(
     base_optimizer = optax.adam(learning_rate=1.0)
 
     
-       # 2. [KR] 가중치 PyTree와 1:1 토폴로지가 정렬된 학습률/가중치감쇠 물리 상수 레일 동적 제어
+    # 2. [KR] 가중치 PyTree와 1:1 토폴로지가 정렬된 학습률/가중치감쇠 물리 상수 레일 동적 제어
     # 2. [EN] Dynamically govern learning rate and weight decay constant rails aligned 1:1 with parameter PyTree topology
     def transform_update_via_hadamard_mux(updates, state, params=None):
         if params is None:
@@ -966,7 +966,7 @@ def execute_enterprise_training_step(
     [EN] Executes static automatic differentiation and parameter updates natively inside accelerator memory without a single conditional branch statement. """
 
     
-       # 1. 고속 오토미분(Automatic Differentiation) 그래프 가동 및 보조 지표 추적을 위한 구조 전개
+    # 1. 고속 오토미분(Automatic Differentiation) 그래프 가동 및 보조 지표 추적을 위한 구조 전개
     # [EN] 1. Activate the high-speed automatic differentiation (autograd) graph and expand the structure for auxiliary metrics tracking
     grad_fn = jax.value_and_grad(loss_fn_compiled, has_aux=True)
     (total_loss, aux_outputs), grads = grad_fn(params, observer_batch)
@@ -988,7 +988,7 @@ def execute_enterprise_training_step(
         jax.tree_util.tree_reduce(lambda acc, val: acc + val, squared_sum_tree, initializer=0.0)
     )
     
-      # 3. 계산된 전역 노름에 기반하여 그래디언트 클리핑(Gradient Clipping) 스케일 팩터 산출
+    # 3. 계산된 전역 노름에 기반하여 그래디언트 클리핑(Gradient Clipping) 스케일 팩터 산출
     # [EN] 3. Calculate Gradient Clipping scale factors based on the computed global norm
     clip_scale = jnp.minimum(1.0, max_norm_limit / (global_grad_norm + 1e-7))
     
