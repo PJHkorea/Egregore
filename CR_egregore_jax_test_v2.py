@@ -805,14 +805,26 @@ def configure_enterprise_silicon_mux_optimizer(
             leaf_lr = (is_gate * gate_lr) + (is_backbone * backbone_lr)
             leaf_wd = (is_gate * gate_weight_decay) + (is_backbone * backbone_weight_decay)
             
-            return (jnp.full_like(leaf_value, leaf_lr), jnp.full_like(leaf_value, leaf_wd))
+            # [KR] 구조적 무결성 복원을 위해 계산된 단정밀도 스칼라 상수 쌍만 가볍게 반환
+            # [EN] Return clean floating-point scalar pairs to preserve structural serialization integrity
+            return leaf_lr, leaf_wd
 
-        mapped_tensors = list(map(_extract_silicon_mask_by_path, flat_params))
+        # flat_params 매핑을 통해 리프별 고유 수치 계수 리스트 고속 추출
+        mapped_scalars = list(map(_extract_silicon_mask_by_path, flat_params))
+        
+        # ====================================================================
+        # [LEAF-LEVEL TENSOR RECONSTRUCTION]
+        # [KR] 추출된 스칼라 값을 원본 가중치 리프의 형상(Shape)에 맞춰 1:1 하드웨어 텐서로 확장 빌드
+        # [EN] Expand extracted scalars into 1:1 hardware tensors matching the exact shape and precision of original leaf values
+        # ====================================================================
+        flat_lr_tensors = [jnp.full_like(leaf_value, lr) for (_, leaf_value), (lr, _) in zip(flat_params, mapped_scalars)]
+        flat_wd_tensors = [jnp.full_like(leaf_value, wd) for (_, leaf_value), (_, wd) in zip(flat_params, mapped_scalars)]
         
         # [KR] 전체 가중치 파라미터 구조와 정확히 동일하게 대칭 사상된 학습률 트리와 가중치 감쇠 트리를 완벽하게 복원
         # [EN] Reconstruct look-alike learning rate and weight decay PyTree topologies matching the exact parametric signature
-        lr_mask_tree = jax.tree_util.tree_unflatten(tree_def, [t[0] for t in mapped_tensors])
-        wd_mask_tree = jax.tree_util.tree_unflatten(tree_def, [t[1] for t in mapped_tensors])
+        lr_mask_tree = jax.tree_util.tree_unflatten(tree_def, flat_lr_tensors)
+        wd_mask_tree = jax.tree_util.tree_unflatten(tree_def, flat_wd_tensors)
+
 
         # ====================================================================
         # [5TH-GEN PURE SILICON HADAMARD MULTIPLEXER ENGINE]
