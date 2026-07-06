@@ -988,7 +988,7 @@ def execute_enterprise_training_step(
         jax.tree_util.tree_reduce(lambda acc, val: acc + val, squared_sum_tree, initializer=0.0)
     )
     
-    # 3. 계산된 전역 노름에 기반하여 그래디언트 클리핑(Gradient Clipping) 스케일 팩터 산출
+      # 3. 계산된 전역 노름에 기반하여 그래디언트 클리핑(Gradient Clipping) 스케일 팩터 산출
     # [EN] 3. Calculate Gradient Clipping scale factors based on the computed global norm
     clip_scale = jnp.minimum(1.0, max_norm_limit / (global_grad_norm + 1e-7))
     
@@ -996,43 +996,32 @@ def execute_enterprise_training_step(
     # [EN] Execute static mapping (jax.tree_util.tree_map) across the entire PyTree structure to control gradient explosion
     clipped_grads = jax.tree_util.tree_map(lambda g: g * clip_scale, grads)
     
-    # 4. 수정된 그래디언트를 옵티마이저 내부 상태로 전파하여 가중치 업데이트 델타 산출
-    # [EN] 4. Propagate the modified gradients into the internal optimizer state to calculate weight update deltas
+    # 4. 수정된 그래디언트를 옵티마이저 내부 상태로 전파하여 가중치 업데이트 델타 산출 (5세대 MUX 수치 정합성 완벽 합치)
+    # [EN] 4. Propagate the modified gradients into the internal optimizer state to calculate weight update deltas (Perfect match with 5th-gen MUX specs)
     updates, new_opt_state = optimizer.update(clipped_grads, opt_state, params)
     new_params = optax.apply_updates(params, updates)
     
     return new_params, new_opt_state, total_loss, aux_outputs
 
 
-import jax
-import jax.numpy as jnp
-from typing import Dict, Any
 
-def run_pure_3step_simulation(rng_key: jax.Array, config: Dict[str, Any], params: Dict[str, Any]):
-    """[KR] 학습 가능한 파라미터와 컴파일된 손실 함수 그래프를 결합하여 가상의 배치 최적화 루프를 구동합니다.
-    [EN] Runs a virtual batch optimization loop by combining learnable parameters with the compiled loss function graph. """
-    spatial_dim = config.get("spatial_dimension", 128)
-    safety_eps = config.get("backpropagation_safety_epsilon", 1e-7)
-    
-    # 1. 고차원 매니폴드 연산에 영구 참조될 고정 위상 기저 앵커 생성 (Sphere & Torus)
-    # [인프라 최적화] 앞단에서 패치 완료된 static_argnums=(0,) 정적 인프라 규격을 완벽하게 충족하며 빌드
-    # [EN] 1. Generate fixed topological basis anchors (Sphere & Torus) to be permanently referenced for high-dimensional manifold operations
-    # [Infra Optimization] Build in perfect fulfillment of the static_argnums=(0,) static infrastructure specifications patched in the preceding layer
-    static_anchors = (
-        build_spherical_manifold_base(spatial_dim),
-        build_toroidal_manifold_base(spatial_dim, config)
+    # 2. [KR] 5세대 완전 통제형 실리콘 MUX 최적화 인프라 및 단일 클로저 손실 함수 인스턴스화
+    #    [EN] Instantiate the 5th-Gen Pure Numerical Silicon MUX infrastructure and single closure loss function
+    optimizer = configure_enterprise_silicon_mux_optimizer(
+        backbone_lr=1e-4,
+        gate_lr=1e-6,
+        backbone_weight_decay=1e-4,
+        gate_weight_decay=0.0,
+        static_param_structure=params
     )
-    
-    # 2. 계층별 차등 최적화(LLRD) 인프라 및 단일 클로저 손실 함수 인스턴스화
-    # [EN] 2. Instantiate Layer-wise Learning Rate Decay (LLRD) infrastructure and the single closure loss function
-    optimizer = configure_enterprise_llrd_optimizer()
     opt_state = optimizer.init(params)
     loss_fn_compiled = create_pure_step_loss_function(static_anchors, config)
     
     print("-" * 88)
 
+
     
-       # 3. 데이터 학습 및 파라미터 업데이트 마스터 루프 가동
+    # 3. 데이터 학습 및 파라미터 업데이트 마스터 루프 가동
     # [EN] 3. Activate the data training and parameter update master loop
     for epoch in range(3):
         # 무상태성 난수 생성을 위한 키 분할 수행
