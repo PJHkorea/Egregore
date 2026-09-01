@@ -1,3 +1,5 @@
+## 해당 레포짓으로 커널 모듈화 및 전체적 수정을 했습니다. https://github.com/PJHkorea/homeostasis-kernel
+## I have modularized the kernel and made comprehensive modifications; please refer to the following repository: https://github.com/PJHkorea/homeostasis-kernel
 
 # 🚀 Optax-Based Accelerator Optimizer Engine Architectural Overhaul (v2.0)
 
